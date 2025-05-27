@@ -172,3 +172,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# data
+data/
+
+# MacOS
+.DS_Store
+# Windows
+Thumbs.db
+# Linux
+*~
