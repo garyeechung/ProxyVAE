@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class CVAE_Loss(nn.Module):
-    def __init__(self, beta):
+    def __init__(self, beta, reduction="sum"):
         super(CVAE_Loss, self).__init__()
-        self.reconstruction_loss = nn.MSELoss(reduction='sum')
+        self.reconstruction_loss = nn.MSELoss(reduction=reduction)
         self.beta = beta
 
     def forward(self, x_recon, x, mu, logvar):
