@@ -1,7 +1,8 @@
 from typing import List
 
 import torch
-from torch.nn import Module, Linear, ReLU, Sequential, ModuleList
+from torch.nn import Module, ModuleList, Sequential
+from torch.nn import Linear, ReLU, Sigmoid
 
 
 class CVAE(Module):
@@ -165,3 +166,35 @@ class ProxyRep2InvarRep(Module):
         # Pass through MLP to get invariant representation
         z_invar = self.mlp(z_proxy)
         return z_invar
+
+
+class ProxyRep2Label(Module):
+    def __init__(self, autoencoder, reparameterize: bool, nb_labels: int, hidden_layer_sizes: List[int] = [256, 512, 256]):
+        super(ProxyRep2Label, self).__init__()
+        self.autoencoder = autoencoder
+        self.reparameterize = reparameterize
+        self.dim_proxy = autoencoder.latent_dim
+        self.nb_labels = nb_labels
+
+        self.mlp = ModuleList()
+        self.mlp.append(Linear(self.dim_proxy, hidden_layer_sizes[0]))
+        self.mlp.append(ReLU())
+        for i in range(len(hidden_layer_sizes) - 1):
+            self.mlp.append(Linear(hidden_layer_sizes[i], hidden_layer_sizes[i + 1]))
+            self.mlp.append(ReLU())
+        self.mlp.append(Linear(hidden_layer_sizes[-1], nb_labels))
+        self.mlp.append(Sigmoid())  # Use Sigmoid for multi-label classification
+        self.mlp = Sequential(*self.mlp)
+
+    def forward(self, x):
+        # Encode proxy representation from x through invariant (V)AE
+        with torch.no_grad():
+            z_proxy = self.autoencoder.encoder(x)
+        if self.reparameterize:
+            mu = z_proxy[:, :self.dim_proxy]
+            logvar = z_proxy[:, self.dim_proxy:]
+            z_proxy = self.autoencoder.reparameterize(mu, logvar)
+
+        # Pass through MLP to get label representation
+        pred = self.mlp(z_proxy)
+        return pred
