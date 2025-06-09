@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 from torch.nn import Module, ModuleList, Sequential
-from torch.nn import Linear, ReLU, Sigmoid
+from torch.nn import Linear, ReLU, Sigmoid, Softmax
 
 
 class CVAE(Module):
@@ -198,3 +198,54 @@ class ProxyRep2Label(Module):
         # Pass through MLP to get label representation
         pred = self.mlp(z_proxy)
         return pred
+
+
+class InfoBottleneckClassifier(Module):
+    def __init__(self, input_dim: int, nb_labels: int, latent_dim: int,
+                 encoder_layer_sizes: List[int] = [256, 512, 256],
+                 mlp_layer_sizes: List[int] = [256, 512, 256]):
+        super(InfoBottleneckClassifier, self).__init__()
+        self.nb_labels = nb_labels
+        self.latent_dim = latent_dim
+        self.input_dim = input_dim
+        self.encoder = self.get_encoder(input_dim, encoder_layer_sizes, latent_dim)
+        self.mlp = self.get_mlp(latent_dim, mlp_layer_sizes, nb_labels)
+
+    def get_encoder(self, input_dim: int, hidden_layer_sizes: List[int], latent_dim: int):
+
+        encoder = ModuleList()
+        encoder.append(Linear(input_dim, hidden_layer_sizes[0]))
+        encoder.append(ReLU())
+        for i in range(len(hidden_layer_sizes) - 1):
+            encoder.append(Linear(hidden_layer_sizes[i], hidden_layer_sizes[i + 1]))
+            encoder.append(ReLU())
+        encoder.append(Linear(hidden_layer_sizes[-1], latent_dim * 2))
+        return Sequential(*encoder)
+
+    def get_mlp(self, latent_dim: int, hidden_layer_sizes: List[int], nb_labels: int):
+
+        mlp = ModuleList()
+        mlp.append(Linear(latent_dim, hidden_layer_sizes[0]))
+        mlp.append(ReLU())
+        for i in range(len(hidden_layer_sizes) - 1):
+            mlp.append(Linear(hidden_layer_sizes[i], hidden_layer_sizes[i + 1]))
+            mlp.append(ReLU())
+        mlp.append(Linear(hidden_layer_sizes[-1], nb_labels))
+        mlp.append(Softmax(dim=-1))
+        return Sequential(*mlp)
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+
+    def forward(self, x):
+        z = self.encoder(x)
+        mu, logvar = z[:, :self.latent_dim], z[:, self.latent_dim:]
+        z = self.reparameterize(mu, logvar)
+        return self.mlp(z), mu, logvar
+
+    def get_z(self, x):
+        z = self.encoder(x)
+        mu, logvar = z[:, :self.latent_dim], z[:, self.latent_dim:]
+        return self.reparameterize(mu, logvar)
