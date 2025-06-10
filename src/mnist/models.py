@@ -6,7 +6,7 @@ from torch.nn import Linear, ReLU, Sigmoid, Softmax
 
 
 class CVAE(Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim, num_classes=10):
+    def __init__(self, input_dim=784, latent_dim=8, hidden_dim=128, num_classes=10):
         super(CVAE, self).__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
@@ -49,7 +49,7 @@ class CVAE(Module):
 
 
 class InvariantAutoEncoder(Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim, cvae):
+    def __init__(self, cvae, input_dim=784, latent_dim=8, hidden_dim=128):
         super(InvariantAutoEncoder, self).__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
@@ -88,7 +88,7 @@ class InvariantAutoEncoder(Module):
 
 
 class InvariantVariationalAutoEncoder(Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim, cvae):
+    def __init__(self, cvae, input_dim=784, latent_dim=8, hidden_dim=128):
         super(InvariantVariationalAutoEncoder, self).__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
@@ -138,7 +138,8 @@ class InvariantVariationalAutoEncoder(Module):
 
 
 class ProxyRep2InvarRep(Module):
-    def __init__(self, autoencoder, reparameterize: bool, hidden_layer_sizes: List[int] = [256, 512, 256]):
+    def __init__(self, autoencoder, reparameterize: bool,
+                 hidden_layer_sizes: List[int] = [128, 128]):
         super(ProxyRep2InvarRep, self).__init__()
         self.autoencoder = autoencoder
         self.reparameterize = reparameterize
@@ -169,7 +170,8 @@ class ProxyRep2InvarRep(Module):
 
 
 class ProxyRep2Label(Module):
-    def __init__(self, autoencoder, reparameterize: bool, nb_labels: int, hidden_layer_sizes: List[int] = [256, 512, 256]):
+    def __init__(self, autoencoder, reparameterize: bool, nb_labels: int,
+                 hidden_layer_sizes: List[int] = [128, 128]):
         super(ProxyRep2Label, self).__init__()
         self.autoencoder = autoencoder
         self.reparameterize = reparameterize
@@ -201,9 +203,9 @@ class ProxyRep2Label(Module):
 
 
 class InfoBottleneckClassifier(Module):
-    def __init__(self, input_dim: int, nb_labels: int, latent_dim: int,
-                 encoder_layer_sizes: List[int] = [256, 512, 256],
-                 mlp_layer_sizes: List[int] = [256, 512, 256]):
+    def __init__(self, nb_labels: int, input_dim=784, latent_dim=8,
+                 encoder_layer_sizes: List[int] = [128, 128],
+                 mlp_layer_sizes: List[int] = [128, 128]):
         super(InfoBottleneckClassifier, self).__init__()
         self.nb_labels = nb_labels
         self.latent_dim = latent_dim
