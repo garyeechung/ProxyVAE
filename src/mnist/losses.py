@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 class CVAE_Loss(nn.Module):
-    def __init__(self, beta, reduction="sum"):
+    def __init__(self, beta):
         super(CVAE_Loss, self).__init__()
-        self.reconstruction_loss = nn.MSELoss(reduction=reduction)
+        self.reconstruction_loss = nn.MSELoss(reduction="mean")
         self.beta = beta
 
     def forward(self, x_recon, x, mu, logvar):
@@ -13,7 +13,7 @@ class CVAE_Loss(nn.Module):
         recon_loss = self.reconstruction_loss(x_recon, x)
 
         # Compute the KL divergence loss
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
         # Combine the losses
         loss = recon_loss + self.beta * kl_loss
@@ -22,9 +22,9 @@ class CVAE_Loss(nn.Module):
 
 
 class InfoBottleneck_Loss(nn.Module):
-    def __init__(self, beta, reduction="sum"):
+    def __init__(self, beta):
         super(InfoBottleneck_Loss, self).__init__()
-        self.cross_entropy_loss = nn.CrossEntropyLoss(reduction=reduction)
+        self.cross_entropy_loss = nn.CrossEntropyLoss(reduction="mean")
         self.beta = beta
 
     def forward(self, y_gt, y_pred, mu, logvar):
@@ -32,7 +32,7 @@ class InfoBottleneck_Loss(nn.Module):
         ce_loss = self.cross_entropy_loss(y_pred, y_gt)
 
         # Compute the KL divergence loss
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
         # Combine the losses
         loss = ce_loss + self.beta * kl_loss
