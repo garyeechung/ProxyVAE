@@ -2,8 +2,8 @@ import argparse
 import torch
 
 from src.mnist.models import InfoBottleneckClassifier, ProxyRep2Label
-from .ib_model import train_infobottleneck_groupifier
-from .ib_posthoc import train_infobottleneck_posthoc
+from .model import train_infobottleneck_groupifier
+from .posthoc import train_infobottleneck_posthoc
 
 
 MERGE_GROUP = [
