@@ -65,12 +65,18 @@ def evaluate_model(model, valid_loader, loss_fn, merge_group, device):
 def train_infobottleneck_groupifier(model: Module, data_dir: str, ckpt_dir: str,
                                     beta: float, device: str, merge_group=MERGE_GROUP,
                                     batch_size=500, lr=5e-4, epochs=200,
-                                    return_each_batch=True):
+                                    return_each_batch=True, replace_existing_ckpt=False):
 
     ckpt_dir = os.path.join(ckpt_dir, "information_bottleneck", f"beta_{beta}")
+    ckpt_path = os.path.join(ckpt_dir, "groupifier.pth")
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
-        ckpt_path = os.path.join(ckpt_dir, "groupifier.pth")
+
+    elif not replace_existing_ckpt and os.path.exists(ckpt_path):
+        print(f"Checkpoint already exists at {ckpt_path}. Skipping training.")
+        model.load_state_dict(torch.load(ckpt_path))
+        print("Model loaded from checkpoint.")
+        return
 
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
