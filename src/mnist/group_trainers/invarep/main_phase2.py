@@ -13,7 +13,7 @@ def main(args):
 
     # Load the CVAE model
     cvae = CVAE(num_classes=len(MERGE_GROUP))
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = args.device
     cvae_ckpt = f"{args.ckpt_dir}/invarep/beta1_{args.beta1}/cvae.pth"
     cvae.load_state_dict(torch.load(cvae_ckpt))
     for param in cvae.parameters():
@@ -70,7 +70,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=500, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate for optimizer")
     parser.add_argument("--epochs", type=int, default=500, help="Number of epochs to train")
-
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                        help="Device to use for training (cuda or cpu)")
     args = parser.parse_args()
 
     main(args)
