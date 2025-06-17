@@ -64,8 +64,9 @@ def evaluate_model(model, valid_loader, loss_fn, merge_group, device):
 
 def train_infobottleneck_groupifier(model: Module, data_dir: str, ckpt_dir: str,
                                     beta: float, device: str, merge_group=MERGE_GROUP,
-                                    batch_size=500, lr=5e-4, epochs=200,
-                                    return_each_batch=True, replace_existing_ckpt=False):
+                                    batch_size: int = 500, epochs: int = 300,
+                                    lr: float = 5e-4, return_each_batch=True,
+                                    replace_existing_ckpt=False):
 
     ckpt_dir = os.path.join(ckpt_dir, "information_bottleneck", f"beta_{beta}")
     ckpt_path = os.path.join(ckpt_dir, "groupifier.pth")
@@ -111,10 +112,10 @@ def train_infobottleneck_groupifier(model: Module, data_dir: str, ckpt_dir: str,
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), ckpt_path)
 
-    nb_minibatches = len(train_loader)
+    nb_minibatch = len(train_loader)
     plt.figure(figsize=(10, 5))
     plt.plot(train_losses, label='Train Loss', color='blue')
-    plt.plot(range(nb_minibatches, nb_minibatches * epochs + 1, nb_minibatches),
+    plt.plot(range(nb_minibatch, nb_minibatch * epochs + 1, nb_minibatch),
              valid_losses, label='Validation Loss', color='orange')
     plt.xlabel('Minibatches')
     plt.ylabel('Loss')
