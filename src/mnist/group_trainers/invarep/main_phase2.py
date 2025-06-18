@@ -35,7 +35,7 @@ def main(args):
     proxy2invarep = proxy2invarep.to(device)
     train_proxy2invarep(model=proxy2invarep, data_dir=args.data_dir, ckpt_dir=args.ckpt_dir,
                         beta1=args.beta1, beta2=args.beta2, device=device,
-                        epochs=args.epochs, batch_size=args.batch_size, lr=args.lr,
+                        epochs=int(args.epochs * 0.6), batch_size=args.batch_size, lr=args.lr,
                         return_each_batch=True, replace_existing_ckpt=False)
 
     # Post-hoc groupifier
