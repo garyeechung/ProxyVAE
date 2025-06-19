@@ -106,23 +106,26 @@ def train_infobottleneck_posthoc(posthoc_model: Module,
             best_val_loss = valid_loss
             torch.save(posthoc_model.state_dict(), ckpt_path)
 
-    # Plot training and validation losses
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_losses, label='Train Loss', color='blue')
-    plt.plot(range(len(train_losses), len(train_losses) + len(valid_losses)),
-             valid_losses, label='Validation Loss', color='orange')
-    plt.xlabel('Iterations')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Losses')
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.grid(True)
+    nb_minibatches = len(train_loader)
+    fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+    axes[0].plot(train_losses, label='Training Loss', color='blue')
+    axes[0].plot(range(nb_minibatches, nb_minibatches * epochs + 1, nb_minibatches),
+                 valid_losses, label='Validation Loss', color='orange')
+    axes[0].set_ylabel('Loss')
+    axes[0].set_title('VAE Proxy to Label Cross Entropy')
+    axes[0].legend()
+    axes[0].set_xscale('log')
+    axes[0].set_xticks([])
+    xlim = axes[0].get_xlim()
+    axes[1].plot(range(nb_minibatches, nb_minibatches * epochs + 1, nb_minibatches),
+                 valid_accuracies, label='Validation Accuracy', color='green')
+    axes[1].set_xlabel('Batch Iterations')
+    axes[1].set_ylabel('Accuracy')
+    axes[1].set_title('VAE Proxy to Label Accuracy')
+    axes[1].legend()
+    axes[1].set_xscale('log')
+    axes[1].set_xlim(xlim)
+    plt.tight_layout()
 
-    max_y = max(max(train_losses), max(valid_losses))
-    max_y = max(max_y, 3)
-    min_y = min(min(train_losses), min(valid_losses))
-    min_y = min(min_y, 1e-2)
-    plt.ylim(min_y, max_y)
-    plt.legend()
     plt.savefig(os.path.join(ckpt_dir, "posthoc_losses.png"))
     plt.close()

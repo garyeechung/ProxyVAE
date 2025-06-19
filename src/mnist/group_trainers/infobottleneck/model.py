@@ -8,16 +8,8 @@ from torch.nn import Module
 import torch.optim as optim
 from tqdm import tqdm
 
-from src.mnist.datasets import get_mnist_dataloaders, get_merged_labels
+from src.mnist.datasets import get_mnist_dataloaders, get_merged_labels, MERGE_GROUP
 from src.mnist.losses import InfoBottleneck_Loss
-
-
-MERGE_GROUP = [
-    [1],
-    [0, 6],
-    [4, 7, 9],
-    [2, 3, 5, 8]
-]
 
 
 def train_model(model, train_loader, optimizer, loss_fn, merge_group, device,
@@ -112,17 +104,26 @@ def train_infobottleneck_groupifier(model: Module, data_dir: str, ckpt_dir: str,
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), ckpt_path)
 
-    nb_minibatch = len(train_loader)
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_losses, label='Train Loss', color='blue')
-    plt.plot(range(nb_minibatch, nb_minibatch * epochs + 1, nb_minibatch),
-             valid_losses, label='Validation Loss', color='orange')
-    plt.xlabel('Minibatches')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Losses')
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.grid(True)
-    plt.legend()
+    nb_minibatches = len(train_loader)
+    fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+    axes[0].plot(train_losses, label='Training Loss', color='blue')
+    axes[0].plot(range(nb_minibatches, nb_minibatches * epochs + 1, nb_minibatches),
+                 valid_losses, label='Validation Loss', color='orange')
+    axes[0].set_ylabel('Loss')
+    axes[0].set_title('VAE Proxy to Label Cross Entropy')
+    axes[0].legend()
+    axes[0].set_xscale('log')
+    axes[0].set_xticks([])
+    xlim = axes[0].get_xlim()
+    axes[1].plot(range(nb_minibatches, nb_minibatches * epochs + 1, nb_minibatches),
+                 valid_accuracies, label='Validation Accuracy', color='green')
+    axes[1].set_xlabel('Batch Iterations')
+    axes[1].set_ylabel('Accuracy')
+    axes[1].set_title('VAE Proxy to Label Accuracy')
+    axes[1].legend()
+    axes[1].set_xscale('log')
+    axes[1].set_xlim(xlim)
+    plt.tight_layout()
+
     plt.savefig(os.path.join(ckpt_dir, "groupifier_losses.png"))
     plt.close()
