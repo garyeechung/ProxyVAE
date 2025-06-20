@@ -1,6 +1,4 @@
 import os
-# import sys
-# sys.path.append(os.path.join(os.getcwd(), "../.."))
 
 import matplotlib.pyplot as plt
 import torch

@@ -1,6 +1,4 @@
 import os
-# import sys
-# sys.path.append(os.path.join(os.getcwd(), "../.."))
 
 import matplotlib.pyplot as plt
 import torch
@@ -8,9 +6,7 @@ from torch.nn import Module
 import torch.optim as optim
 from tqdm import tqdm
 
-from src.mnist.datasets import get_mnist_dataloaders  # , convert_flattened_to_image, get_merged_labels
-# from src.mnist.models import InfoBottleneckClassifier, ProxyRep2Label
-# from src.mnist.losses import InfoBottleneck_Loss
+from src.mnist.datasets import get_mnist_dataloaders
 
 
 def train_posthoc_model(model, train_loader, optimizer, loss_fn, device,
