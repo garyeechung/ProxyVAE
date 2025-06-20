@@ -4,14 +4,7 @@ import torch
 from src.mnist.models import InfoBottleneckClassifier, ProxyRep2Label
 from .model import train_infobottleneck_groupifier
 from .posthoc import train_infobottleneck_posthoc
-
-
-MERGE_GROUP = [
-    [1],
-    [0, 6],
-    [4, 7, 9],
-    [2, 3, 5, 8]
-]
+from src.mnist.datasets import MERGE_GROUP
 
 
 def main(args):
@@ -19,7 +12,8 @@ def main(args):
     device = args.device
     train_infobottleneck_groupifier(model=model, data_dir=args.data_dir, ckpt_dir=args.ckpt_dir,
                                     beta=args.beta, device=device, batch_size=args.batch_size,
-                                    lr=args.lr, epochs=args.epochs, merge_group=MERGE_GROUP)
+                                    lr=args.lr, epochs=args.epochs, merge_group=MERGE_GROUP,
+                                    replace_existing_ckpt=False)
 
     for param in model.parameters():
         param.requires_grad = False
@@ -27,7 +21,8 @@ def main(args):
     posthoc_model = ProxyRep2Label(autoencoder=model, reparameterize=True, nb_labels=10)
     train_infobottleneck_posthoc(posthoc_model=posthoc_model, data_dir=args.data_dir,
                                  ckpt_dir=args.ckpt_dir, beta=args.beta, device=device,
-                                 batch_size=args.batch_size, lr=args.lr, epochs=args.epochs)
+                                 batch_size=args.batch_size, lr=args.lr, epochs=args.epochs,
+                                 replace_existing_ckpt=False)
 
 
 if __name__ == "__main__":
