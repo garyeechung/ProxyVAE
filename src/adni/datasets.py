@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-from monai.transforms import Compose, CropForeground, Lambdad
-from monai.transforms import Resized, ResizeWithPadOrCrop, MapTransform
+from monai.transforms import Compose, CropForeground, Lambdad, MapTransform
+from monai.transforms import Resized, ResizeWithPadOrCrop, ToTensord
 from monai.data import Dataset, DataLoader
 import nibabel as nib
 import numpy as np
@@ -120,7 +120,8 @@ def get_adni_dataloaders(df, targets: List[str],
         PadToSquare(keys=["image"]),
         Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
         Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
-        OneHotEncoded(keys=targets, num_classes=num_classes)
+        OneHotEncoded(keys=targets, num_classes=num_classes),
+        ToTensord(keys=["image", *targets])
     ])
 
     transforms_valid = Compose([
@@ -128,14 +129,16 @@ def get_adni_dataloaders(df, targets: List[str],
         PadToSquare(keys=["image"]),
         Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
         Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
-        OneHotEncoded(keys=targets, num_classes=num_classes)
+        OneHotEncoded(keys=targets, num_classes=num_classes),
+        ToTensord(keys=["image", *targets])
     ])
 
     transforms_unknown = Compose([
         LoadAndPreprocessSlice(keys=["image"], slice_range_from_center=0.0, margin=10),
         PadToSquare(keys=["image"]),
         Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
-        Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0))
+        Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
+        ToTensord(keys=["image"])
     ])
 
     unknown_rows = df.index[df["manufacturer_id"] == -1].tolist()
