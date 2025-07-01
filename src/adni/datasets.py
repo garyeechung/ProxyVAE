@@ -1,27 +1,42 @@
 from typing import List, Optional
 
 from monai.transforms import Compose, CropForeground, Lambdad, MapTransform
-from monai.transforms import Resized, ResizeWithPadOrCrop, ToTensord
+from monai.transforms import ResizeWithPadOrCrop, ToTensord
 from monai.data import Dataset, DataLoader
 import nibabel as nib
 import numpy as np
 import pandas as pd
+import scipy as sp
 
 
 class LoadAndPreprocessSlice(MapTransform):
-    def __init__(self, keys, slice_range_from_center: float = 0.0, margin: int = 10):
+    def __init__(self, keys, slice_range_from_center: float = 0.0, margin: int = 10,
+                 target_zooms: Optional[List[float]] = [1.0, 1.0, 1.0],
+                 skip_zooming_depth: bool = False):
         super().__init__(keys=keys)
         assert 0.0 <= slice_range_from_center <= 1.0, "ratio must be between 0.0 and 1.0"
         self.slice_range_from_center = slice_range_from_center
         assert margin >= 0, "margin must be non-negative integer"
         self.margin = margin
+        self.target_zooms = target_zooms
+        self.skip_zooming_depth = skip_zooming_depth
 
     def __call__(self, data):
         d = dict(data)
         for key in self.keys:
             path = d[key]
-            volume = nib.load(path).get_fdata()
+            nii_data = nib.load(path)
+            volume = nii_data.get_fdata(dtype=np.float32)
             volume = np.nan_to_num(volume, nan=0.0, posinf=1.0, neginf=0.0)
+            if self.target_zooms is not None:
+                # Resample the volume to the target zooms
+                zooms = nii_data.header.get_zooms()
+                if self.skip_zooming_depth:
+                    target_zoom = self.target_zooms[:2]
+                    target_zoom.append(zooms[2])
+                zoom_factors = [old_zoom / target_zoom
+                                for target_zoom, old_zoom in zip(self.target_zooms, zooms)]
+                volume = sp.ndimage.zoom(volume, zoom_factors, order=1)
             volume = np.clip(volume, 0.0, 1.0)
             volume = volume.transpose(2, 1, 0)  # from HWD to DWH
             volume = self._crop_foreground(volume)
@@ -47,16 +62,15 @@ class LoadAndPreprocessSlice(MapTransform):
 
 
 class PadToSquare(MapTransform):
-    def __init__(self, keys=None):
+    def __init__(self, keys=None, spatial_size=(256, 256)):
         super().__init__(keys=keys)
+        self.spatial_size = spatial_size
 
     def __call__(self, data):
         d = dict(data)
         for key in self.keys:
             img = d[key]
-            h, w = img.shape[-2:]
-            side = max(h, w)
-            padder = ResizeWithPadOrCrop(spatial_size=(side, side))
+            padder = ResizeWithPadOrCrop(spatial_size=self.spatial_size)
             d[key] = padder(img)
         return d
 
@@ -107,7 +121,10 @@ def get_data_from_df(df, targets: List[str], include_mappable_site_empty=False):
 def get_adni_dataloaders(df, targets: List[str],
                          stratified_by: Optional[List[str]] = ["model_type_id"],
                          bootstrap=True, batch_size=32, num_workers=4,
-                         include_mappable_site_empty=False, seed=42):
+                         include_mappable_site_empty=False, seed=42,
+                         target_size_in_mm: float = 256.0,
+                         target_zooms: Optional[List[float]] = [1.0, 1.0, 1.0],
+                         skip_zooming_depth=False):
     np.random.seed(seed)
     AVAILABLE_TARGETS = ["manufacturer_id", "model_type_id", "site"]
     for target in targets:
@@ -115,10 +132,12 @@ def get_adni_dataloaders(df, targets: List[str],
 
     num_classes = [df[target].max() + 1 for target in targets]
 
+    spatial_size = (int(target_size_in_mm / target_zooms[0]),
+                    int(target_size_in_mm / target_zooms[1]))
+
     transforms_train = Compose([
         LoadAndPreprocessSlice(keys=["image"], slice_range_from_center=0.1, margin=10),
-        PadToSquare(keys=["image"]),
-        Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
+        PadToSquare(keys=["image"], spatial_size=spatial_size),
         Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
         OneHotEncoded(keys=targets, num_classes=num_classes),
         ToTensord(keys=["image", *targets])
@@ -126,8 +145,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     transforms_valid = Compose([
         LoadAndPreprocessSlice(keys=["image"], slice_range_from_center=0.0, margin=10),
-        PadToSquare(keys=["image"]),
-        Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
+        PadToSquare(keys=["image"], spatial_size=spatial_size),
         Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
         OneHotEncoded(keys=targets, num_classes=num_classes),
         ToTensord(keys=["image", *targets])
@@ -135,8 +153,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     transforms_unknown = Compose([
         LoadAndPreprocessSlice(keys=["image"], slice_range_from_center=0.0, margin=10),
-        PadToSquare(keys=["image"]),
-        Resized(keys=["image"], spatial_size=(128, 128), mode="bilinear", align_corners=False),
+        PadToSquare(keys=["image"], spatial_size=spatial_size),
         Lambdad(keys=["image"], func=lambda x: np.clip(x, 0.0, 1.0)),
         ToTensord(keys=["image"])
     ])
