@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 
 from monai.transforms import Compose, CropForeground, Lambdad, MapTransform
@@ -103,14 +104,14 @@ def split_train_val(list_):
     return pd.Series({'train': train_list, 'valid': valid_list})
 
 
-def get_data_from_df(df, targets: List[str], include_mappable_site_empty=False):
+def get_data_from_df(df, data_dir: str, targets: List[str], include_mappable_site_empty=False):
 
     if not include_mappable_site_empty:
         df = df[~df["site_empty"]]
 
     data = []
     for _, row in df.iterrows():
-        item = {"image": row["full_path"]}
+        item = {"image": os.path.join(data_dir, row["path"])}
         for target in targets:
             item[target] = row[target]
         data.append(item)
@@ -118,7 +119,7 @@ def get_data_from_df(df, targets: List[str], include_mappable_site_empty=False):
     return data
 
 
-def get_adni_dataloaders(df, targets: List[str],
+def get_adni_dataloaders(df, targets: List[str], data_dir: str,
                          stratified_by: Optional[List[str]] = ["model_type_id"],
                          bootstrap=True, batch_size=32, num_workers=4,
                          include_mappable_site_empty=False, seed=42,
@@ -192,7 +193,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     # Training Dataloader
     df_subset = df.loc[train_rows]
-    data = get_data_from_df(df_subset, targets, include_mappable_site_empty)
+    data = get_data_from_df(df_subset, data_dir, targets, include_mappable_site_empty)
     dataset = Dataset(data=data, transform=transforms_train)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True,
                             num_workers=num_workers, pin_memory=True)
@@ -200,7 +201,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     # Validation Dataloader
     df_subset = df.loc[valid_rows]
-    data = get_data_from_df(df_subset, targets, include_mappable_site_empty)
+    data = get_data_from_df(df_subset, data_dir, targets, include_mappable_site_empty)
     dataset = Dataset(data=data, transform=transforms_valid)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                             num_workers=num_workers, pin_memory=True)
@@ -208,7 +209,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     # Testing Dataloader
     df_subset = df.loc[holdout_rows]
-    data = get_data_from_df(df_subset, targets, include_mappable_site_empty)
+    data = get_data_from_df(df_subset, data_dir, targets, include_mappable_site_empty)
     dataset = Dataset(data=data, transform=transforms_valid)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                             num_workers=num_workers, pin_memory=True)
@@ -216,7 +217,7 @@ def get_adni_dataloaders(df, targets: List[str],
 
     # Unknown Dataloader
     df_subset = df.loc[unknown_rows]
-    data = [{"image": row["full_path"]} for _, row in df_subset.iterrows()]
+    data = [{"image": os.path.join(data_dir, row["path"])} for _, row in df_subset.iterrows()]
     dataset = Dataset(data=data, transform=transforms_unknown)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
                             num_workers=num_workers, pin_memory=True)
