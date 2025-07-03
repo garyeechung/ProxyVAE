@@ -33,15 +33,20 @@ class InvariantVAE(Module):
 
     def __init__(self, cvae, latent_dim=256):
         super(InvariantVAE, self).__init__()
+
         self.encoder1 = cvae.encoder
+        self.z1_dim = cvae.latent_dim
         for param in self.encoder1.parameters():
             param.requires_grad = False
-        self.encoder = Encoder(latent_dim)
-        self.decoder = Decoder(latent_dim + cvae.latent_dim)
+
+        self.z2_dim = latent_dim
+        self.encoder2 = Encoder(self.z2_dim)
+
+        self.decoder = Decoder(self.z1_dim + self.z2_dim)
 
     def forward(self, x):
         z1, _, _ = self.encoder1(x)
-        z2, mu, logvar = self.encoder(x)
+        z2, mu, logvar = self.encoder2(x)
         # Concatenate z1 and z2
         z = torch.cat((z1, z2), dim=-3)  # z.shape: (num_classes + 256, 8, 8)
         x_recon = self.decoder(z)

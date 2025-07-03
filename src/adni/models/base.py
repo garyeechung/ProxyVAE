@@ -37,11 +37,16 @@ class Encoder(Module):
         eps = torch.randn_like(std)
         return mu + eps * std
 
-    def forward(self, x):
+    def forward(self, x, return_flattened=False):
         z = self.conv(x)
         mu = self.mu_enc(z)
         logvar = self.logvar_enc(z)
-        return self.reparameterize(mu, logvar), self.flatten(mu), self.flatten(logvar)
+        z = self.reparameterize(mu, logvar)
+        if return_flattened:
+            z = self.flatten(z)
+            mu = self.flatten(mu)
+            logvar = self.flatten(logvar)
+        return z, mu, logvar
 
 
 class Decoder(Module):
