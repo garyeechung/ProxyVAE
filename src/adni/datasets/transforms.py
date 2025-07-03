@@ -156,7 +156,7 @@ def get_cache_transforms(
         LoadImageFromPathd(keys=image_keys),
         ToResolutiond(keys=image_keys, target_zooms=target_zooms,
                       skip_zooming_depth=skip_zooming_depth),
-        CropForegroundd(keys=image_keys, source_key=image_keys[0], select_fn=lambda x: x > 0., margin=5),
+        CropForegroundd(keys=image_keys, source_key=image_keys[0], select_fn=is_foreground, margin=5),
         Transposed(keys=["image"], indices=(2, 1, 0)),
         ResizeWithPadOrCropd(keys=image_keys, spatial_size=spatial_size),
         Transposed(keys=["image"], indices=(2, 1, 0)),
@@ -164,3 +164,7 @@ def get_cache_transforms(
                          slice_range_from_center=slice_range_from_center)
     ]
     return Compose(transforms)
+
+
+def is_foreground(x):
+    return x > 0.0
