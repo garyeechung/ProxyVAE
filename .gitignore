@@ -184,3 +184,6 @@ results/
 Thumbs.db
 # Linux
 *~
+
+# logs
+**/wandb/
