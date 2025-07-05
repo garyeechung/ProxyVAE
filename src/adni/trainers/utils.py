@@ -1,3 +1,7 @@
+import base64
+import hashlib
+import json
+
 import torch
 from torch import Tensor
 
@@ -23,3 +27,11 @@ def vis_x_recon_comparison(x: Tensor, recon_x: Tensor, n=4):
     image_comparison[h // 2, :] = 1.0
 
     return image_comparison
+
+
+def convert_config_to_hash(config: dict, length: int = 8) -> str:
+    # Convert to sorted JSON string for consistency
+    json_str = json.dumps(config, sort_keys=True)
+    sha1_digest = hashlib.sha1(json_str.encode()).digest()
+    b64_encoded = base64.urlsafe_b64encode(sha1_digest).decode("utf-8")
+    return b64_encoded[:length]

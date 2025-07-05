@@ -8,7 +8,7 @@ import wandb
 
 from src.adni.models import ConditionalVAE
 from src.adni.losses import VAE_Loss
-from src.adni.trainers.utils import vis_x_recon_comparison
+from src.adni.trainers.utils import vis_x_recon_comparison, convert_config_to_hash
 
 
 WANDB_PROJECT = "InvaRep"
@@ -74,10 +74,9 @@ def evaluate_model(model: ConditionalVAE, val_loader,
         return avg_loss, avg_recon_loss, avg_kl_loss
 
 
-def train_cvae(model: Module,
-               train_loader, valid_loader,
-               ckpt_dir: str, x_key: str, y_key: str,
-               beta1: float, device: str, epochs: int = 500,
+def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
+               x_key: str, y_key: str, beta1: float, device: str,
+               bootstrap: bool, batch_per_epoch: int, epochs: int = 500,
                lr: float = 5e-4, if_existing_ckpt: str = "resume"):
     """
     data_dir: Absolute path containing the ADNI data.
@@ -87,9 +86,21 @@ def train_cvae(model: Module,
     beta1: Weight for the KL divergence loss.
     """
 
+    batch_size, _, h, w = next(iter(train_loader))[x_key].shape
+    config = {
+        "beta1": beta1,
+        "lr": lr,
+        "batch_size": batch_size,
+        "input_shape": (h, w),
+        "bootstrap": bootstrap,
+        "batch_per_epoch": batch_per_epoch,
+    }
+
+    config_hash = convert_config_to_hash(config)
+
     wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP, name=f"cvae_beta1_{beta1:.1E}",
-               config={"beta1": beta1, "lr": lr})
+               group=WANDB_GROUP, name=f"cvae_beta1_{beta1:.1E}_{config_hash}",
+               id=config_hash, resume="allow", config=config)
 
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}")
     if not os.path.exists(ckpt_dir):
@@ -117,12 +128,13 @@ def train_cvae(model: Module,
     elif os.path.exists(ckpt_path) and if_existing_ckpt == "replace":
         os.remove(ckpt_path)
         best_valid_loss = float("inf")
+        ckpt_epoch = 0
     else:
         best_valid_loss = float("inf")
-
+        ckpt_epoch = 0
     model = model.to(device)
 
-    for epoch in tqdm(range(1, epochs + 1)):
+    for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
         train_total_loss, train_recon_loss, train_kl_loss = train_model(
             model=model, train_loader=train_loader,
             x_key=x_key, y_key=y_key, optimizer=optimizer,
