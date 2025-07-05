@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from monai.transforms import Compose, CropForegroundd, MapTransform
+from monai.transforms import Compose, MapTransform
 from monai.transforms import ResizeWithPadOrCropd, Transposed
 import nibabel as nib
 import numpy as np
@@ -34,6 +34,9 @@ class ToResolutiond(MapTransform):
     def __init__(self, keys, target_zooms: Optional[List[float]] = [1.0, 1.0, 1.0],
                  skip_zooming_depth: bool = True):
         """
+        Resize the volume to the target zooms.
+        Originally for converting to isotropic voxels.
+        Now deprecated, using other tools to register the volume to a template space.
         Args:
             keys: keys in the data dict to apply this transform.
             target_zooms: target zooms for the volume
@@ -141,11 +144,8 @@ class GetCenterSlicesd(MapTransform):
 
 def get_cache_transforms(
         image_keys: List[str],
-        label_keys: List[str],
-        target_zooms: Optional[List[float]] = [1.0, 1.0, 1.0],
         spatial_size: Optional[List[int]] = [256, 256],
-        skip_zooming_depth: bool = True,
-        slice_range_from_center: float = 0.1
+        slice_range_from_center: float = 0.03
 ) -> Compose:
     """
     Returns a Compose of transforms to load and preprocess the volume data.
@@ -154,14 +154,10 @@ def get_cache_transforms(
 
     transforms = [
         LoadImageFromPathd(keys=image_keys),
-        ToResolutiond(keys=image_keys, target_zooms=target_zooms,
-                      skip_zooming_depth=skip_zooming_depth),
-        CropForegroundd(keys=image_keys, source_key=image_keys[0], select_fn=is_foreground, margin=5),
-        Transposed(keys=["image"], indices=(2, 1, 0)),
+        Transposed(keys=["image"], indices=(2, 1, 0)),  # from HWD to DWH
         ResizeWithPadOrCropd(keys=image_keys, spatial_size=spatial_size),
-        Transposed(keys=["image"], indices=(2, 1, 0)),
-        GetCenterSlicesd(keys=image_keys,
-                         slice_range_from_center=slice_range_from_center)
+        Transposed(keys=["image"], indices=(2, 1, 0)),  # from DWH back to HWD
+        GetCenterSlicesd(keys=image_keys, slice_range_from_center=slice_range_from_center)
     ]
     return Compose(transforms)
 

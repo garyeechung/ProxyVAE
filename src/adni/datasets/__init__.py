@@ -17,12 +17,13 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
                          bootstrap: bool = True, batch_size: int = 32,
                          batch_per_epoch: int = 100, num_workers: int = 4,
                          include_mappable_site_empty: bool = False,
-                         seed: int = 42, target_size_in_mm: float = 256.0,
-                         target_zooms: Optional[List[float]] = [1.0, 1.0, 1.0],
-                         skip_zooming_depth: bool = False,
-                         cache_type: Optional[str] = "persistent"):
+                         seed: int = 42, skip_zooming_depth: bool = False,
+                         spatial_size: List[int] = [224, 224],
+                         cache_type: Optional[str] = "persistent",
+                         slice_range_from_center: float = 0.03) -> List[DataLoader]:
     np.random.seed(seed)
-    cache_dir = os.path.join(data_dir, "cache")
+    cache_dir = f"{spatial_size[0]}x{spatial_size[1]}_{slice_range_from_center}"
+    cache_dir = os.path.join(data_dir, "cache", cache_dir)
 
     AVAILABLE_TARGETS = ["manufacturer_id", "model_type_id", "site"]
     for target in targets:
@@ -33,20 +34,14 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
     df = df.merge(df_targets_count, on=targets, how="left")
 
     AVAILABLE_CACHE_TYPES = ["persistent", "cache"]
-    assert cache_type in AVAILABLE_CACHE_TYPES, \
-        f"cache_type must be one of {AVAILABLE_CACHE_TYPES}, got {cache_type}"
+    if cache_type is not None:
+        assert cache_type in AVAILABLE_CACHE_TYPES, \
+            f"cache_type must be one of {AVAILABLE_CACHE_TYPES}, got {cache_type}"
 
     num_classes = [df[target].max() + 1 for target in targets]
 
-    spatial_size = [int(target_size_in_mm / target_zooms[0]),
-                    int(target_size_in_mm / target_zooms[1])]
-
-    cache_transforms = get_cache_transforms(image_keys=["image"],
-                                            label_keys=targets,
-                                            target_zooms=target_zooms,
-                                            spatial_size=spatial_size,
-                                            skip_zooming_depth=skip_zooming_depth,
-                                            slice_range_from_center=0.1)
+    cache_transforms = get_cache_transforms(image_keys=["image"], spatial_size=spatial_size,
+                                            slice_range_from_center=slice_range_from_center)
     train_transforms = Compose([
         GetRandomSliced(keys=["image"]),
         Transposed(keys=["image"], indices=(2, 1, 0)),
