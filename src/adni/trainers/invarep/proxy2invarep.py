@@ -81,6 +81,7 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
     if os.path.exists(ckpt_path) and if_existing_ckpt == "pass":
         checkpoint = torch.load(ckpt_path, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
+        ckpt_epoch = checkpoint["epoch"]
         return model
     elif os.path.exists(ckpt_path) and if_existing_ckpt == "resume":
         checkpoint = torch.load(ckpt_path, weights_only=False)
@@ -96,8 +97,10 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
     elif os.path.exists(ckpt_path) and if_existing_ckpt == "replace":
         os.remove(ckpt_path)
         best_valid_loss = float("inf")
+        ckpt_epoch = 0
     else:
         best_valid_loss = float("inf")
+        ckpt_epoch = 0
 
     model = model.to(device)
 
