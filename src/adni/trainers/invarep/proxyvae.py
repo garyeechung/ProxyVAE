@@ -108,11 +108,11 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
     ckpt_path = os.path.join(ckpt_dir, "proxyvae.pth")
     ckpt_best_path = os.path.join(ckpt_dir, "proxyvae_best.pth")
     if os.path.exists(ckpt_path) and if_existing_ckpt == "pass":
-        checkpoint = torch.load(ckpt_path)
+        checkpoint = torch.load(ckpt_path, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
         return model
     elif os.path.exists(ckpt_path) and if_existing_ckpt == "resume":
-        checkpoint = torch.load(ckpt_path)
+        checkpoint = torch.load(ckpt_path, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         best_valid_loss = checkpoint["best_valid_loss"]
