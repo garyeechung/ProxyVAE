@@ -1,14 +1,15 @@
 from typing import Tuple
 
+import torch
 from torch.nn import Module, Sequential, Linear, ReLU
 from .base import Encoder
 from .vae import InvariantVAE
 
 
-class ProxyRep2InvarRep(Module):
+class ProxyRep2InvaRep(Module):
     def __init__(self, ivae: InvariantVAE,
-                 image_size: Tuple[int, int] = (128, 128)):
-        super(ProxyRep2InvarRep, self).__init__()
+                 image_size: Tuple[int, int] = (224, 224)):
+        super(ProxyRep2InvaRep, self).__init__()
         self.ivae = ivae
         for param in self.ivae.parameters():
             param.requires_grad = False
@@ -30,15 +31,34 @@ class ProxyRep2InvarRep(Module):
             ReLU()
         )
 
-    def forward(self, z2):
-        # assuming z2 is flattened to (batch_size, z2_dim)
-        return self.mlp(z2)
+    def forward(self, x):
+        with torch.no_grad():
+            z1, _, _ = self.ivae.encoder1(x, return_flattened=True)
+            z2, _, _ = self.ivae.encoder2(x, return_flattened=True)
+        return z1, z2, self.mlp(z2)
 
 
 class VariationalPredictor(Module):
-    def __init__(self, encoder: Encoder):
+    def __init__(self, encoder: Encoder, num_classes: int, is_posthoc: bool,
+                 image_size: Tuple[int, int] = (224, 224)):
         super(VariationalPredictor, self).__init__()
         self.encoder = encoder
+        if is_posthoc:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
+        self.num_classes = num_classes
+        self.flatten_dim = encoder.latent_dim * (image_size[0] // 16) * (image_size[1] // 16)
+
+        self.mlp = Sequential(
+            Linear(self.flatten_dim, 1024),
+            ReLU(),
+            Linear(1024, 2048),
+            ReLU(),
+            Linear(2048, 1024),
+            ReLU(),
+            Linear(1024, num_classes)
+        )
 
     def forward(self, x):
-        return None
+        z, mu, logvar = self.encoder(x, return_flattened=True)
+        return self.mlp(z), mu, logvar
