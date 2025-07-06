@@ -8,7 +8,7 @@ import wandb
 
 from src.adni.models import InvariantVAE
 from src.adni.losses import VAE_Loss
-from src.adni.trainers.utils import vis_x_recon_comparison, convert_config_to_hash
+from src.adni.trainers.utils import vis_x_recon_comparison
 
 
 WANDB_PROJECT = "InvaRep"
@@ -93,12 +93,10 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
         "batch_per_epoch": batch_per_epoch,
     }
 
-    config_hash = convert_config_to_hash(config, length=8)
-
     wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
                group=WANDB_GROUP,
-               name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}_{config_hash}",
-               id=config_hash, resume="allow", config=config)
+               name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
+               config=config)
 
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")
     if not os.path.exists(ckpt_dir):

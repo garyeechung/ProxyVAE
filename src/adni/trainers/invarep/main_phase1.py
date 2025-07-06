@@ -25,6 +25,11 @@ def main(args):
         spatial_size=args.spatial_size,
         slice_range_from_center=args.slice_range_from_center
     )
+    print(f"train: {len(dataloaders[0].dataset)} samples")
+    print(f"valid: {len(dataloaders[1].dataset)} samples")
+    print(f"test: {len(dataloaders[2].dataset)} samples")
+    print(f"unknown: {len(dataloaders[3].dataset)} samples")
+
     cvae = ConditionalVAE(num_classes=3)
     cvae = cvae.to(args.device)
 
