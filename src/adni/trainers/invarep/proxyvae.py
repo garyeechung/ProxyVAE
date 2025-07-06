@@ -44,7 +44,7 @@ def train_model(model: InvariantVAE, train_loader,
 
 
 def evaluate_model(model: InvariantVAE, val_loader,
-                   x_key, optimizer, loss_fn, device,
+                   x_key, loss_fn, device,
                    return_comparison=True):
     model.eval()
 
@@ -78,12 +78,12 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
                    beta1: float, beta2: float, device: str,
                    bootstrap: bool,
                    epochs: int = 500, lr: float = 5e-4,
-                   if_existing_ckpt: str = "resume",
-                   return_each_batch=True):
+                   if_existing_ckpt: str = "resume"):
 
     batch_size, _, h, w = next(iter(train_loader))[x_key].shape
     batch_per_epoch = len(train_loader)
     config = {
+        "model_type": "proxyvae",
         "beta1": beta1,
         "beta2": beta2,
         "lr": lr,
@@ -98,7 +98,8 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
     wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
                group=WANDB_GROUP,
                name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}_{config_hash}",
-               config=config)
+               id=config_hash, resume="allow", config=config)
+
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -107,6 +108,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
     loss_fn = VAE_Loss(beta2)
 
     ckpt_path = os.path.join(ckpt_dir, "proxyvae.pth")
+    ckpt_best_path = os.path.join(ckpt_dir, "proxyvae_best.pth")
     if os.path.exists(ckpt_path) and if_existing_ckpt == "pass":
         checkpoint = torch.load(ckpt_path)
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -154,23 +156,20 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
             best_valid_loss = valid_total_loss
             torch.save({
                 "epoch": epoch,
-                "best_epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "best_valid_loss": best_valid_loss
-            }, ckpt_path)
+            }, ckpt_best_path)
             log_data["valid/comparison"] = wandb.Image(comparison, caption=f"Epoch {epoch}")
 
         wandb.log(log_data)
 
-    best_checkpoint = torch.load(ckpt_path)
-    new_checkpoint = {
-        "epoch": epochs,
-        "best_epoch": best_checkpoint["best_epoch"],
-        "model_state_dict": best_checkpoint["model_state_dict"],
-        "optimizer_state_dict": best_checkpoint["optimizer_state_dict"],
+    latest_checkpoint = {
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
         "best_valid_loss": best_valid_loss
     }
-    torch.save(new_checkpoint, ckpt_path)
+    torch.save(latest_checkpoint, ckpt_path)
     wandb.finish()
     return model

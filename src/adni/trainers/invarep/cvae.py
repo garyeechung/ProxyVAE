@@ -44,7 +44,7 @@ def train_model(model: ConditionalVAE, train_loader,
 
 
 def evaluate_model(model: ConditionalVAE, val_loader,
-                   x_key, y_key, optimizer, loss_fn, device,
+                   x_key, y_key, loss_fn, device,
                    return_comparison=True):
     model.eval()
 
@@ -89,6 +89,8 @@ def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
     batch_size, _, h, w = next(iter(train_loader))[x_key].shape
     batch_per_epoch = len(train_loader)
     config = {
+        "model_type": "cvae",
+        "target_key": y_key,
         "beta1": beta1,
         "lr": lr,
         "batch_size": batch_size,
@@ -111,6 +113,7 @@ def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
     loss_fn = VAE_Loss(beta1)
 
     ckpt_path = os.path.join(ckpt_dir, "cvae.pth")
+    ckpt_best_path = os.path.join(ckpt_dir, "cvae_best.pth")
     if os.path.exists(ckpt_path) and if_existing_ckpt == "pass":
         checkpoint = torch.load(ckpt_path)
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -143,7 +146,7 @@ def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
 
         valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
             model=model, val_loader=valid_loader,
-            x_key=x_key, y_key=y_key, optimizer=optimizer,
+            x_key=x_key, y_key=y_key,
             loss_fn=loss_fn, device=device, return_comparison=True)
 
         log_data = {
@@ -159,23 +162,20 @@ def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
             best_valid_loss = valid_total_loss
             torch.save({
                 "epoch": epoch,
-                "best_epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "best_valid_loss": best_valid_loss
-            }, ckpt_path)
+            }, ckpt_best_path)
             log_data["valid/comparison"] = wandb.Image(comparison, caption=f"Epoch {epoch}")
 
         wandb.log(log_data)
 
-    best_checkpoint = torch.load(ckpt_path)
-    new_checkpoint = {
-        "epoch": epochs,
-        "best_epoch": best_checkpoint["best_epoch"],
-        "model_state_dict": best_checkpoint["model_state_dict"],
-        "optimizer_state_dict": best_checkpoint["optimizer_state_dict"],
+    latest_checkpoint = {
+        "epoch": epoch,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
         "best_valid_loss": best_valid_loss
     }
-    torch.save(new_checkpoint, ckpt_path)
+    torch.save(latest_checkpoint, ckpt_path)
     wandb.finish()
     return model
