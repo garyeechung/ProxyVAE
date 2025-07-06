@@ -130,7 +130,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
 
     model = model.to(device)
 
-    for epoch in tqdm(range(1, epochs + 1)):
+    for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
         train_total_loss, train_recon_loss, train_kl_loss = train_model(
             model=model, train_loader=train_loader,
             x_key=x_key, optimizer=optimizer,

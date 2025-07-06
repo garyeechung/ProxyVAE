@@ -14,12 +14,12 @@ WANDB_GROUP = "ADNI_by_manufacturer"
 
 
 def train_model(model: ProxyRep2InvaRep, train_loader,
-                optimizer, loss_fn, device) -> None:
+                x_key, optimizer, loss_fn, device) -> None:
     model.train()
 
     total_losses = 0.0
     for batch in train_loader:
-        x = batch["image"].float().to(device)
+        x = batch[x_key].float().to(device)
 
         optimizer.zero_grad()
         z1, z2, z1_pred = model(x)
@@ -33,12 +33,13 @@ def train_model(model: ProxyRep2InvaRep, train_loader,
     return avg_loss
 
 
-def evaluate_model(model: ProxyRep2InvaRep, valid_loader, loss_fn, device) -> float:
+def evaluate_model(model: ProxyRep2InvaRep, valid_loader,
+                   x_key, loss_fn, device) -> float:
     model.eval()
     total_losses = 0.0
     with torch.no_grad():
         for batch in valid_loader:
-            x = batch["image"].float().to(device)
+            x = batch[x_key].float().to(device)
             z1, z2, z1_pred = model(x)
             loss = loss_fn(z1_pred, z1)
             total_losses += loss.item()
@@ -47,11 +48,11 @@ def evaluate_model(model: ProxyRep2InvaRep, valid_loader, loss_fn, device) -> fl
 
 
 def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
-                        ckpt_dir: str, device: str,
+                        ckpt_dir: str, x_key: str, device: str,
                         beta1: float, beta2: float, bootstrap: bool,  # this three for config only, must match the model
                         epochs: int = 500, lr: float = 5e-4,
                         if_existing_ckpt: str = "resume"):
-    batch_size, _, h, w = next(iter(train_loader))["image"].shape
+    batch_size, _, h, w = next(iter(train_loader))[x_key].shape
     batch_per_epoch = len(train_loader)
     config = {
         "model_type": "proxy2invarep",
@@ -100,12 +101,12 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
 
     model = model.to(device)
 
-    for epoch in tqdm(range(1, epochs + 1)):
+    for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
         train_loss = train_model(model=model, train_loader=train_loader,
-                                 optimizer=optimizer, loss_fn=loss_fn,
-                                 device=device)
+                                 x_key=x_key, optimizer=optimizer,
+                                 loss_fn=loss_fn, device=device)
         valid_loss = evaluate_model(model=model, valid_loader=valid_loader,
-                                    loss_fn=loss_fn, device=device)
+                                    x_key=x_key, loss_fn=loss_fn, device=device)
 
         log_data = {
             "train/mse_loss": train_loss,
