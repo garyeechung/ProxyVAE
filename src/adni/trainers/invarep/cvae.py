@@ -2,7 +2,6 @@ import os
 
 # import pandas as pd
 import torch
-from torch.nn import Module
 from tqdm import tqdm
 import wandb
 
@@ -74,7 +73,7 @@ def evaluate_model(model: ConditionalVAE, val_loader,
         return avg_loss, avg_recon_loss, avg_kl_loss
 
 
-def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
+def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
                x_key: str, y_key: str, beta1: float, device: str,
                bootstrap: bool, epochs: int = 500,
                lr: float = 5e-4, if_existing_ckpt: str = "resume"):
