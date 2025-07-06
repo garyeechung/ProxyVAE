@@ -76,7 +76,7 @@ def evaluate_model(model: ConditionalVAE, val_loader,
 
 def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
                x_key: str, y_key: str, beta1: float, device: str,
-               bootstrap: bool, batch_per_epoch: int, epochs: int = 500,
+               bootstrap: bool, epochs: int = 500,
                lr: float = 5e-4, if_existing_ckpt: str = "resume"):
     """
     data_dir: Absolute path containing the ADNI data.
@@ -87,6 +87,7 @@ def train_cvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
     """
 
     batch_size, _, h, w = next(iter(train_loader))[x_key].shape
+    batch_per_epoch = len(train_loader)
     config = {
         "beta1": beta1,
         "lr": lr,
