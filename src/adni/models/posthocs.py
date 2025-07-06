@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 import torch
-from torch.nn import Module, Sequential, Linear, ReLU
+from torch.nn import Module, Sequential, Linear, ReLU, Softmax
 from .base import Encoder
 from .vae import InvariantVAE
 
@@ -39,6 +39,8 @@ class ProxyRep2InvaRep(Module):
 
 
 class VariationalPredictor(Module):
+    """ A classifier that predicts the class of the input image
+    """
     def __init__(self, num_classes: int, is_posthoc: bool,
                  encoder: Encoder = None, latent_dim: int = 256,
                  image_size: List[int] = [224, 224]):
@@ -61,7 +63,8 @@ class VariationalPredictor(Module):
             ReLU(),
             Linear(2048, 1024),
             ReLU(),
-            Linear(1024, self.num_classes)
+            Linear(1024, self.num_classes),
+            Softmax(dim=-1)
         )
 
     def forward(self, x):
