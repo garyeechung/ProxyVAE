@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 import torch
 from torch.nn import Module, Sequential, Linear, ReLU
@@ -39,15 +39,20 @@ class ProxyRep2InvaRep(Module):
 
 
 class VariationalPredictor(Module):
-    def __init__(self, encoder: Encoder, num_classes: int, is_posthoc: bool,
-                 image_size: Tuple[int, int] = (224, 224)):
+    def __init__(self, num_classes: int, is_posthoc: bool,
+                 encoder: Encoder = None, latent_dim: int = 256,
+                 image_size: List[int] = [224, 224]):
         super(VariationalPredictor, self).__init__()
-        self.encoder = encoder
+        if encoder is not None:
+            self.encoder = encoder
+        else:
+            self.encoder = Encoder(latent_dim=latent_dim)
+            is_posthoc = False
         if is_posthoc:
             for param in self.encoder.parameters():
                 param.requires_grad = False
         self.num_classes = num_classes
-        self.flatten_dim = encoder.latent_dim * (image_size[0] // 16) * (image_size[1] // 16)
+        self.flatten_dim = self.encoder.latent_dim * (image_size[0] // 16) * (image_size[1] // 16)
 
         self.mlp = Sequential(
             Linear(self.flatten_dim, 1024),
@@ -56,7 +61,7 @@ class VariationalPredictor(Module):
             ReLU(),
             Linear(2048, 1024),
             ReLU(),
-            Linear(1024, num_classes)
+            Linear(1024, self.num_classes)
         )
 
     def forward(self, x):
