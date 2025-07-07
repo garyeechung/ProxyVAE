@@ -98,10 +98,6 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
         "batch_per_epoch": batch_per_epoch,
     }
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP, name=f"cvae_beta1_{beta1:.1E}",
-               config=config)
-
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}")
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -133,6 +129,11 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
     else:
         best_valid_loss = float("inf")
         ckpt_epoch = 0
+
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
+               group=WANDB_GROUP, name=f"cvae_beta1_{beta1:.1E}",
+               config=config)
+
     model = model.to(device)
 
     for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):

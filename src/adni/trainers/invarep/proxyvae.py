@@ -93,11 +93,6 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
         "batch_per_epoch": batch_per_epoch,
     }
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP,
-               name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
-               config=config)
-
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -131,6 +126,11 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
         best_valid_loss = float("inf")
         ckpt_epoch = 0
 
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
+               group=WANDB_GROUP,
+               name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
+               config=config)
+
     model = model.to(device)
 
     for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
@@ -141,8 +141,8 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
 
         valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
             model=model, val_loader=valid_loader,
-            x_key=x_key, optimizer=optimizer,
-            loss_fn=loss_fn, device=device, return_comparison=True)
+            x_key=x_key, loss_fn=loss_fn, device=device, return_comparison=True
+        )
 
         log_data = {
             "train/total_loss": train_total_loss,

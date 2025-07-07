@@ -73,10 +73,6 @@ def train_posthoc_predictor(model: VariationalPredictor,
         "batch_per_epoch": batch_per_epoch,
     }
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY, group=WANDB_GROUP,
-               name=f"posthoc_{y_key}_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
-               config=config)
-
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")
 
     if not os.path.exists(ckpt_dir):
@@ -111,6 +107,10 @@ def train_posthoc_predictor(model: VariationalPredictor,
     else:
         best_valid_loss = float("inf")
         ckpt_epoch = 0
+
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY, group=WANDB_GROUP,
+               name=f"posthoc_{y_key}_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
+               config=config)
 
     model = model.to(device)
 

@@ -65,11 +65,7 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
         "batch_per_epoch": batch_per_epoch,
     }
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP, name=f"proxy2invarep_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
-               config=config)
-
-    ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1}", f"beta2_{beta2}")
+    ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
 
@@ -101,6 +97,11 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
     else:
         best_valid_loss = float("inf")
         ckpt_epoch = 0
+
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
+               group=WANDB_GROUP,
+               name=f"proxy2invarep_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
+               config=config)
 
     model = model.to(device)
 
