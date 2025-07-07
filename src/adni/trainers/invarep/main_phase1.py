@@ -10,16 +10,11 @@ from .cvae import train_cvae
 
 
 def main(args):
-    # args.data_dir = "/home/chungk1/Repositories/InvaRep/data/ADNI/"
-    # args.spatial_size = [224, 224]
-    # args.slice_range_from_center = 0.03
-    # args.batch_per_epoch = 50
-    # args.bootstrap = True
     df = pd.read_csv(os.path.join(args.data_dir, "adni_data.csv"))
     dataloaders = get_adni_dataloaders(
         df, data_dir=os.path.join(args.data_dir, "FA_rigid_MNI_1mm"),
         targets=["manufacturer_id", "model_type_id"],
-        batch_size=128, include_mappable_site_empty=False,
+        batch_size=args.batch_size, include_mappable_site_empty=False,
         cache_type="persistent", bootstrap=args.bootstrap,
         num_workers=0, batch_per_epoch=args.batch_per_epoch,
         spatial_size=args.spatial_size,
@@ -33,8 +28,6 @@ def main(args):
     cvae = ConditionalVAE(num_classes=3)
     cvae = cvae.to(args.device)
 
-    # args.ckpt_dir = "/home/chungk1/Repositories/InvaRep/checkpoints/adni/manufacturer"
-    # args.if_existing_ckpt = "resume"
     train_cvae(cvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                ckpt_dir=args.ckpt_dir,
                x_key="image",
