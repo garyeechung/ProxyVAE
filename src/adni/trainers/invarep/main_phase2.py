@@ -79,7 +79,7 @@ def main(args):
     torch.cuda.empty_cache()
 
     # Post-hoc predictor for manufacturer_id
-    posthoc_group = VariationalPredictor(encoder=proxy2invarep.encoder2,
+    posthoc_group = VariationalPredictor(encoder=proxyvae.encoder2,
                                          num_classes=3, is_posthoc=True)
     posthoc_group = posthoc_group.to(args.device)
     print(f"Training post-hoc predictor for manufacturer_id with beta1={args.beta1}, beta2={args.beta2}")
@@ -93,7 +93,7 @@ def main(args):
     torch.cuda.empty_cache()
 
     # Post-hoc predictor for model_type_id
-    posthoc_class = VariationalPredictor(encoder=proxy2invarep.encoder2,
+    posthoc_class = VariationalPredictor(encoder=proxyvae.encoder2,
                                          num_classes=9, is_posthoc=True)
     posthoc_class = posthoc_class.to(args.device)
     print(f"Training post-hoc predictor for model_type_id with beta1={args.beta1}, beta2={args.beta2}")
