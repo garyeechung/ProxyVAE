@@ -43,7 +43,7 @@ class VariationalPredictor(Module):
     """
     def __init__(self, num_classes: int, is_posthoc: bool,
                  encoder: Encoder = None, latent_dim: int = 256,
-                 image_size: List[int] = [224, 224]):
+                 base_channels: int = 32, image_size: List[int] = [224, 224]):
         super(VariationalPredictor, self).__init__()
         if encoder is not None:
             self.encoder = encoder
@@ -57,13 +57,13 @@ class VariationalPredictor(Module):
         self.flatten_dim = self.encoder.latent_dim * (image_size[0] // 16) * (image_size[1] // 16)
 
         self.mlp = Sequential(
-            Linear(self.flatten_dim, 1024),
+            Linear(self.flatten_dim, base_channels * 32),
             ReLU(),
-            Linear(1024, 2048),
+            Linear(base_channels * 32, base_channels * 64),
             ReLU(),
-            Linear(2048, 1024),
+            Linear(base_channels * 64, base_channels * 32),
             ReLU(),
-            Linear(1024, self.num_classes),
+            Linear(base_channels * 32, self.num_classes),
             Softmax(dim=-1)
         )
 

@@ -5,11 +5,11 @@ from .base import Encoder, Decoder
 
 class ConditionalVAE(Module):
 
-    def __init__(self, num_classes, latent_dim=256):
+    def __init__(self, num_classes, latent_dim=256, base_channels=32):
         super(ConditionalVAE, self).__init__()
         self.latent_dim = latent_dim
-        self.encoder = Encoder(latent_dim)
-        self.decoder = Decoder(latent_dim + num_classes)
+        self.encoder = Encoder(latent_dim, base_channels=base_channels)
+        self.decoder = Decoder(latent_dim + num_classes, base_channels=base_channels)
         self.num_classes = num_classes
 
     def forward(self, x, y):
@@ -31,7 +31,7 @@ class ConditionalVAE(Module):
 
 class InvariantVAE(Module):
 
-    def __init__(self, cvae, latent_dim=256):
+    def __init__(self, cvae, latent_dim=256, base_channels=32):
         super(InvariantVAE, self).__init__()
 
         self.encoder1 = cvae.encoder
@@ -40,9 +40,9 @@ class InvariantVAE(Module):
             param.requires_grad = False
 
         self.z2_dim = latent_dim
-        self.encoder2 = Encoder(self.z2_dim)
+        self.encoder2 = Encoder(self.z2_dim, base_channels=base_channels)
 
-        self.decoder = Decoder(self.z1_dim + self.z2_dim)
+        self.decoder = Decoder(self.z1_dim + self.z2_dim, base_channels=base_channels)
 
     def forward(self, x):
         z1, _, _ = self.encoder1(x)

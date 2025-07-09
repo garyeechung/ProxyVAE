@@ -4,30 +4,30 @@ from torch.nn import Conv2d, ConvTranspose2d, ReLU, Flatten
 
 
 class Encoder(Module):
-    def __init__(self, latent_dim=256):
+    def __init__(self, latent_dim=256, base_channels=32):
         super().__init__()
         self.conv = Sequential(
-            Conv2d(1, 32, 3, stride=1, padding=1),  # 128 -> 128
+            Conv2d(1, base_channels, 3, stride=1, padding=1),  # 128 -> 128
             ReLU(),
-            Conv2d(32, 32, 3, stride=2, padding=1),  # 128 -> 64
+            Conv2d(base_channels, base_channels, 3, stride=2, padding=1),  # 128 -> 64
             ReLU(),
-            Conv2d(32, 64, 3, stride=1, padding=1),  # 64 -> 64
+            Conv2d(base_channels, base_channels * 2, 3, stride=1, padding=1),  # 64 -> 64
             ReLU(),
-            Conv2d(64, 64, 3, stride=2, padding=1),  # 64 -> 32
+            Conv2d(base_channels * 2, base_channels * 2, 3, stride=2, padding=1),  # 64 -> 32
             ReLU(),
-            Conv2d(64, 128, 3, stride=1, padding=1),  # 32 -> 32
+            Conv2d(base_channels * 2, base_channels * 4, 3, stride=1, padding=1),  # 32 -> 32
             ReLU(),
-            Conv2d(128, 128, 3, stride=2, padding=1),  # 32 -> 16
+            Conv2d(base_channels * 4, base_channels * 4, 3, stride=2, padding=1),  # 32 -> 16
             ReLU(),
-            Conv2d(128, 256, 3, stride=1, padding=1),  # 16 -> 16
+            Conv2d(base_channels * 4, base_channels * 8, 3, stride=1, padding=1),  # 16 -> 16
             ReLU(),
-            Conv2d(256, 256, 3, stride=2, padding=1),  # 16 -> 8
+            Conv2d(base_channels * 8, base_channels * 8, 3, stride=2, padding=1),  # 16 -> 8
             ReLU(),
-            Conv2d(256, 256, 3, stride=1, padding=1),  # 8 -> 8
+            Conv2d(base_channels * 8, base_channels * 8, 3, stride=1, padding=1),  # 8 -> 8
             ReLU(),
         )
-        self.mu_enc = Conv2d(256, latent_dim, 1)
-        self.logvar_enc = Conv2d(256, latent_dim, 1)
+        self.mu_enc = Conv2d(base_channels * 8, latent_dim, 1)
+        self.logvar_enc = Conv2d(base_channels * 8, latent_dim, 1)
         self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)
         self.latent_dim = latent_dim
 
@@ -50,29 +50,29 @@ class Encoder(Module):
 
 
 class Decoder(Module):
-    def __init__(self, latent_dim=256):
+    def __init__(self, latent_dim=256, base_channels=32):
         super().__init__()
         self.conv = Sequential(
-            Conv2d(latent_dim, 256, 1),
+            Conv2d(latent_dim, base_channels * 8, 1),
             ReLU(),
-            Conv2d(256, 256, 3, stride=1, padding=1),  # 8 -> 8
+            Conv2d(base_channels * 8, base_channels * 8, 3, stride=1, padding=1),  # 8 -> 8
             ReLU(),
-            ConvTranspose2d(256, 256, 3, stride=2, padding=1, output_padding=1),  # 8 -> 16
+            ConvTranspose2d(base_channels * 8, base_channels * 8, 3, stride=2, padding=1, output_padding=1),  # 8 -> 16
             ReLU(),
-            Conv2d(256, 128, 3, stride=1, padding=1),  # 16 -> 16
+            Conv2d(base_channels * 8, base_channels * 4, 3, stride=1, padding=1),  # 16 -> 16
             ReLU(),
-            ConvTranspose2d(128, 128, 3, stride=2, padding=1, output_padding=1),  # 16 -> 32
+            ConvTranspose2d(base_channels * 4, base_channels * 4, 3, stride=2, padding=1, output_padding=1),  # 16 -> 32
             ReLU(),
-            Conv2d(128, 64, 3, stride=1, padding=1),  # 32 -> 32
+            Conv2d(base_channels * 4, base_channels * 2, 3, stride=1, padding=1),  # 32 -> 32
             ReLU(),
-            ConvTranspose2d(64, 64, 3, stride=2, padding=1, output_padding=1),  # 32 -> 64
+            ConvTranspose2d(base_channels * 2, base_channels * 2, 3, stride=2, padding=1, output_padding=1),  # 32 -> 64
             ReLU(),
-            Conv2d(64, 32, 3, stride=1, padding=1),  # 64 -> 64
+            Conv2d(base_channels * 2, base_channels, 3, stride=1, padding=1),  # 64 -> 64
             ReLU(),
-            ConvTranspose2d(32, 32, 3, stride=2, padding=1, output_padding=1),  # 64 -> 128
+            ConvTranspose2d(base_channels, base_channels, 3, stride=2, padding=1, output_padding=1),  # 64 -> 128
             ReLU(),
         )
-        self.out = Conv2d(32, 1, kernel_size=3, stride=1, padding=1)
+        self.out = Conv2d(base_channels, 1, kernel_size=3, stride=1, padding=1)
 
     def forward(self, z):
         z = self.conv(z)
