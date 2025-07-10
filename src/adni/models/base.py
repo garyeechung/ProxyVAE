@@ -1,33 +1,43 @@
 import torch
 from torch.nn import Module, Sequential
 from torch.nn import Conv2d, ConvTranspose2d, ReLU, Flatten
+from torchvision.models import resnet18
 
 
 class Encoder(Module):
-    def __init__(self, latent_dim=256, base_channels=32):
+    def __init__(self, conv=None, weights="DEFAULT", latent_dim=256, base_channels=32):
         super().__init__()
-        self.conv = Sequential(
-            Conv2d(1, base_channels, 3, stride=1, padding=1),  # 128 -> 128
-            ReLU(),
-            Conv2d(base_channels, base_channels, 3, stride=2, padding=1),  # 128 -> 64
-            ReLU(),
-            Conv2d(base_channels, base_channels * 2, 3, stride=1, padding=1),  # 64 -> 64
-            ReLU(),
-            Conv2d(base_channels * 2, base_channels * 2, 3, stride=2, padding=1),  # 64 -> 32
-            ReLU(),
-            Conv2d(base_channels * 2, base_channels * 4, 3, stride=1, padding=1),  # 32 -> 32
-            ReLU(),
-            Conv2d(base_channels * 4, base_channels * 4, 3, stride=2, padding=1),  # 32 -> 16
-            ReLU(),
-            Conv2d(base_channels * 4, base_channels * 8, 3, stride=1, padding=1),  # 16 -> 16
-            ReLU(),
-            Conv2d(base_channels * 8, base_channels * 8, 3, stride=2, padding=1),  # 16 -> 8
-            ReLU(),
-            Conv2d(base_channels * 8, base_channels * 8, 3, stride=1, padding=1),  # 8 -> 8
-            ReLU(),
-        )
-        self.mu_enc = Conv2d(base_channels * 8, latent_dim, 1)
-        self.logvar_enc = Conv2d(base_channels * 8, latent_dim, 1)
+        if conv == "resnet18":
+            resnet = resnet18(weights=weights)
+            self.conv = Sequential(*list(resnet.children())[:-2])
+            dummy_input = torch.zeros((1, 3, 128, 128))
+            z = self.conv(dummy_input)
+            conv_out_channels = z.shape[1]
+
+        else:
+            self.conv = Sequential(
+                Conv2d(1, base_channels, 3, stride=1, padding=1),  # 128 -> 128
+                ReLU(),
+                Conv2d(base_channels, base_channels, 3, stride=2, padding=1),  # 128 -> 64
+                ReLU(),
+                Conv2d(base_channels, base_channels * 2, 3, stride=1, padding=1),  # 64 -> 64
+                ReLU(),
+                Conv2d(base_channels * 2, base_channels * 2, 3, stride=2, padding=1),  # 64 -> 32
+                ReLU(),
+                Conv2d(base_channels * 2, base_channels * 4, 3, stride=1, padding=1),  # 32 -> 32
+                ReLU(),
+                Conv2d(base_channels * 4, base_channels * 4, 3, stride=2, padding=1),  # 32 -> 16
+                ReLU(),
+                Conv2d(base_channels * 4, base_channels * 8, 3, stride=1, padding=1),  # 16 -> 16
+                ReLU(),
+                Conv2d(base_channels * 8, base_channels * 8, 3, stride=2, padding=1),  # 16 -> 8
+                ReLU(),
+                Conv2d(base_channels * 8, base_channels * 8, 3, stride=1, padding=1),  # 8 -> 8
+                ReLU(),
+            )
+            conv_out_channels = base_channels * 8
+        self.mu_enc = Conv2d(conv_out_channels, latent_dim, 1)
+        self.logvar_enc = Conv2d(conv_out_channels, latent_dim, 1)
         self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)
         self.latent_dim = latent_dim
 

@@ -43,18 +43,21 @@ class VariationalPredictor(Module):
     """
     def __init__(self, num_classes: int, is_posthoc: bool,
                  encoder: Encoder = None, latent_dim: int = 256,
-                 base_channels: int = 32, image_size: List[int] = [224, 224]):
+                 base_channels: int = 32, image_size: List[int] = [224, 224],
+                 image_channels: int = 1, conv: str = None, weights: str = "DEFAULT"):
         super(VariationalPredictor, self).__init__()
         if encoder is not None:
             self.encoder = encoder
         else:
-            self.encoder = Encoder(latent_dim=latent_dim)
+            self.encoder = Encoder(conv=conv, weights=weights, latent_dim=latent_dim)
             is_posthoc = False
         if is_posthoc:
             for param in self.encoder.parameters():
                 param.requires_grad = False
         self.num_classes = num_classes
-        self.flatten_dim = self.encoder.latent_dim * (image_size[0] // 16) * (image_size[1] // 16)
+        mock_image = torch.zeros((1, image_channels, *image_size))
+        mock_z, _, _ = self.encoder(mock_image, return_flattened=True)
+        self.flatten_dim = mock_z.shape[-1]
 
         self.mlp = Sequential(
             Linear(self.flatten_dim, base_channels * 32),
