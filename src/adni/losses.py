@@ -35,6 +35,9 @@ class InfoBottleneck_Loss(nn.Module):
         kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
         # Combine the losses
-        loss = ce_loss + self.beta * kl_loss
+        if self.beta <= 0:
+            loss = ce_loss
+        else:
+            loss = ce_loss + self.beta * kl_loss
 
         return loss, ce_loss, kl_loss
