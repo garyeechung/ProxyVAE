@@ -1,24 +1,26 @@
 from typing import List, Tuple
 
 import torch
-from torch.nn import Module, Sequential, Linear, ReLU, Softmax
+from torch.nn import Module, Sequential, Linear, ReLU, Sigmoid
 from .base import Encoder
 from .vae import InvariantVAE
 
 
 class ProxyRep2InvaRep(Module):
-    def __init__(self, ivae: InvariantVAE,
+    def __init__(self, ivae: InvariantVAE, downsample_factor: int,
                  image_size: Tuple[int, int] = (224, 224)):
         super(ProxyRep2InvaRep, self).__init__()
         self.ivae = ivae
         for param in self.ivae.parameters():
             param.requires_grad = False
 
-        # Assuming input size is divisible by 16
-        # 16 because of 4 downsampling layers for the encoder
-        bottleneck_size = (image_size[0] // 16) * (image_size[1] // 16)
-        z1_dim = self.ivae.z1_dim * bottleneck_size
-        z2_dim = self.ivae.z2_dim * bottleneck_size
+        mock_image = torch.zeros((1, 1, *image_size))
+        with torch.no_grad():
+            mock_z1, _, _ = self.ivae.encoder1(mock_image, return_flattened=True)
+            mock_z2, _, _ = self.ivae.encoder2(mock_image, return_flattened=True)
+
+        z1_dim = mock_z1.shape[-1]
+        z2_dim = mock_z2.shape[-1]
 
         self.mlp = Sequential(
             Linear(z2_dim, 1024),
@@ -43,13 +45,13 @@ class VariationalPredictor(Module):
     """
     def __init__(self, num_classes: int, is_posthoc: bool,
                  encoder: Encoder = None, latent_dim: int = 256,
-                 base_channels: int = 32, image_size: List[int] = [224, 224],
-                 image_channels: int = 1, conv: str = None, weights: str = "DEFAULT"):
+                 base_channels: int = 4, image_size: List[int] = [224, 224],
+                 image_channels: int = 1, backbone: str = None, weights: str = "DEFAULT"):
         super(VariationalPredictor, self).__init__()
         if encoder is not None:
             self.encoder = encoder
         else:
-            self.encoder = Encoder(conv=conv, weights=weights, latent_dim=latent_dim)
+            self.encoder = Encoder(backbone=backbone, weights=weights, latent_dim=latent_dim)
             is_posthoc = False
         if is_posthoc:
             for param in self.encoder.parameters():
@@ -67,9 +69,11 @@ class VariationalPredictor(Module):
             Linear(base_channels * 64, base_channels * 32),
             ReLU(),
             Linear(base_channels * 32, self.num_classes),
-            Softmax(dim=-1)
+            Sigmoid()
+            # Softmax(dim=-1)  # Uncomment if you want probabilities
         )
 
     def forward(self, x):
         z, mu, logvar = self.encoder(x, return_flattened=True)
-        return self.mlp(z), mu, logvar
+        y_pred = self.mlp(z)
+        return y_pred, mu, logvar
