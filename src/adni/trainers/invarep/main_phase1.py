@@ -25,11 +25,17 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    cvae = ConditionalVAE(num_classes=3)
+    if "resnet" in args.backbone:
+        cvae = ConditionalVAE(num_classes=3, latent_dim=256, base_channels=4,
+                              backbone=args.backbone, weights="DEFAULT")
+    elif args.backbone.isdigit():
+        args.backbone = f"cnn{int(args.backbone)}"
+        cvae = ConditionalVAE(num_classes=3, latent_dim=256, base_channels=4,
+                              downsample_factor=int(args.backbone))
     cvae = cvae.to(args.device)
 
     train_cvae(cvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-               ckpt_dir=args.ckpt_dir,
+               ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
                x_key="image",
                y_key="manufacturer_id",
                beta1=args.beta1,
@@ -46,8 +52,9 @@ if __name__ == "__main__":
                         default="/home/chungk1/Repositories/InvaRep/data/ADNI/",
                         help="Directory for ADNI data")
     parser.add_argument("--ckpt_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/checkpoints/adni/manufacturer",
+                        default="/home/chungk1/Repositories/InvaRep/checkpoints/adni",
                         help="Directory to save checkpoints")
+    parser.add_argument("--backbone", type=str, default="4", help="Backbone architecture")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate for optimizer")

@@ -10,7 +10,7 @@ from src.adni.models import ProxyRep2InvaRep
 
 WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
-WANDB_GROUP = "ADNI_by_manufacturer"
+WANDB_GROUP = "ADNI_ResNet18"
 
 
 def train_model(model: ProxyRep2InvaRep, train_loader,
