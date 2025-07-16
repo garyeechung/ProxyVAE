@@ -64,8 +64,7 @@ def main(args):
     for param in proxyvae.parameters():
         param.requires_grad = False
 
-    proxy2invarep = ProxyRep2InvaRep(proxyvae, image_size=args.spatial_size,
-                                     downsample_factor=proxyvae.downsample_factor)
+    proxy2invarep = ProxyRep2InvaRep(proxyvae, image_size=args.spatial_size)
     proxy2invarep = proxy2invarep.to(args.device)
     print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
     train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],

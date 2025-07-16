@@ -1,14 +1,13 @@
 from typing import List, Tuple
 
 import torch
-from torch.nn import Module, Sequential, Linear, ReLU, Sigmoid
+from torch.nn import Module, Sequential, Linear, ReLU, Softmax
 from .base import Encoder
 from .vae import InvariantVAE
 
 
 class ProxyRep2InvaRep(Module):
-    def __init__(self, ivae: InvariantVAE, downsample_factor: int,
-                 image_size: Tuple[int, int] = (224, 224)):
+    def __init__(self, ivae: InvariantVAE, image_size: Tuple[int, int] = (224, 224)):
         super(ProxyRep2InvaRep, self).__init__()
         self.ivae = ivae
         for param in self.ivae.parameters():
@@ -69,8 +68,7 @@ class VariationalPredictor(Module):
             Linear(base_channels * 64, base_channels * 32),
             ReLU(),
             Linear(base_channels * 32, self.num_classes),
-            Sigmoid()
-            # Softmax(dim=-1)  # Uncomment if you want probabilities
+            Softmax(dim=-1)
         )
 
     def forward(self, x):
