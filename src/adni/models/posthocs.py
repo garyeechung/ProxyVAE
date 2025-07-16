@@ -29,7 +29,6 @@ class ProxyRep2InvaRep(Module):
             Linear(2048, 1024),
             ReLU(),
             Linear(1024, z1_dim),
-            ReLU()
         )
 
     def forward(self, x):
