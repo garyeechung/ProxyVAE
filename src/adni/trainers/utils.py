@@ -2,8 +2,12 @@ import base64
 import hashlib
 import json
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torch import Tensor
+import seaborn as sns
+from sklearn import metrics
 
 
 def vis_x_recon_comparison(x: Tensor, recon_x: Tensor, n=4):
@@ -35,3 +39,15 @@ def convert_config_to_hash(config: dict, length: int = 8) -> str:
     sha1_digest = hashlib.sha1(json_str.encode()).digest()
     b64_encoded = base64.urlsafe_b64encode(sha1_digest).decode("utf-8")
     return b64_encoded[:length]
+
+
+def get_confusion_matrix_heatmap_as_nparray(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+
+    confusion_matrix = metrics.confusion_matrix(y_true, y_pred)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', ax=ax)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title("Confusion Matrix")
+
+    return fig
