@@ -16,7 +16,12 @@ class VAE_Loss(nn.Module):
         kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
 
         # Combine the losses
-        total_loss = recon_loss + self.beta * kl_loss
+        if self.beta <= 0:
+            total_loss = recon_loss
+        else:
+            # If beta is positive, combine the losses
+            # Otherwise, just return the reconstruction loss
+            total_loss = recon_loss + self.beta * kl_loss
 
         return total_loss, recon_loss, kl_loss
 
