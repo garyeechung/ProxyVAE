@@ -43,6 +43,7 @@ def main(args):
                y_key="manufacturer_id",
                beta1=args.beta1,
                bootstrap=args.bootstrap,
+               bound_z_by=args.bound_z_by,
                device=args.device,
                epochs=args.epochs,
                lr=args.lr,

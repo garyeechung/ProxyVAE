@@ -60,9 +60,10 @@ class Encoder(Module):
         mu = self.mu_enc(z)
         logvar = self.logvar_enc(z)
         logvar = torch.clamp(logvar, -10, 10)
-        z = self.reparameterize(mu, logvar)
         if self.output_activation is not None:
-            z = self.output_activation(z)
+            mu = self.output_activation(mu)
+            logvar = self.output_activation(logvar)
+        z = self.reparameterize(mu, logvar)
         if return_flattened:
             z = self.flatten(z)
             mu = self.flatten(mu)

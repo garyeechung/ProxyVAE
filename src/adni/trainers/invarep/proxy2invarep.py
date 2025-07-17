@@ -49,7 +49,8 @@ def evaluate_model(model: ProxyRep2InvaRep, valid_loader,
 
 def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
                         ckpt_dir: str, x_key: str, device: str,
-                        beta1: float, beta2: float, bootstrap: bool,  # this three for config only, must match the model
+                        beta1: float, beta2: float, bootstrap: bool,
+                        bound_z_by: str,
                         epochs: int = 500, lr: float = 5e-4,
                         if_existing_ckpt: str = "resume"):
     batch_size, _, h, w = next(iter(train_loader))[x_key].shape
@@ -63,6 +64,7 @@ def train_proxy2invarep(model: ProxyRep2InvaRep, train_loader, valid_loader,
         "input_shape": (h, w),
         "bootstrap": bootstrap,
         "batch_per_epoch": batch_per_epoch,
+        "bound_z_by": bound_z_by,
     }
 
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")

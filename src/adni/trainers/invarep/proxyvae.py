@@ -76,7 +76,7 @@ def evaluate_model(model: InvariantVAE, val_loader,
 def train_proxyvae(model: Module, train_loader, valid_loader,
                    ckpt_dir: str, x_key: str,
                    beta1: float, beta2: float, device: str,
-                   bootstrap: bool,
+                   bootstrap: bool, bound_z_by: str,
                    epochs: int = 500, lr: float = 5e-4,
                    if_existing_ckpt: str = "resume"):
 
@@ -91,6 +91,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
         "input_shape": (h, w),
         "bootstrap": bootstrap,
         "batch_per_epoch": batch_per_epoch,
+        "bound_z_by": bound_z_by,
     }
 
     ckpt_dir = os.path.join(ckpt_dir, "invarep", f"beta1_{beta1:.1E}", f"beta2_{beta2:.1E}")

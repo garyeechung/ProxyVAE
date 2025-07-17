@@ -94,7 +94,7 @@ def evaluate_model(model: VariationalPredictor, valid_loader,
 def train_infobottleneck(model: VariationalPredictor,
                          train_loader, valid_loader,
                          ckpt_dir: str, x_key: str, y_key: str,
-                         beta: float, device: str,
+                         beta: float, device: str, bound_z_by: str,
                          bootstrap: bool, epochs: int = 500,
                          lr: float = 5e-4,
                          if_existing_ckpt: str = "resume"):
@@ -110,6 +110,7 @@ def train_infobottleneck(model: VariationalPredictor,
         "input_shape": (h, w),
         "bootstrap": bootstrap,
         "batch_per_epoch": batch_per_epoch,
+        "bound_z_by": bound_z_by,
     }
 
     ckpt_dir = os.path.join(ckpt_dir, "infobottleneck", f"beta_{beta:.1E}")

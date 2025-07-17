@@ -56,6 +56,7 @@ def main(args):
                    beta1=args.beta1,
                    beta2=args.beta2,
                    bootstrap=args.bootstrap,
+                   bound_z_by=args.bound_z_by,
                    device=args.device,
                    epochs=args.epochs,
                    lr=args.lr,
@@ -76,6 +77,7 @@ def main(args):
                         beta1=args.beta1,
                         beta2=args.beta2,
                         bootstrap=args.bootstrap,
+                        bound_z_by=args.bound_z_by,
                         device=args.device,
                         epochs=args.epochs,
                         lr=args.lr,
@@ -92,6 +94,7 @@ def main(args):
                             ckpt_dir=ckpt_dir,
                             x_key="image", y_key="manufacturer_id",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by,
                             bootstrap=args.bootstrap, epochs=args.epochs,
                             lr=args.lr, if_existing_ckpt="resume")
     posthoc_group = posthoc_group.to("cpu")
@@ -106,6 +109,7 @@ def main(args):
                             ckpt_dir=ckpt_dir,
                             x_key="image", y_key="model_type_id",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by,
                             bootstrap=args.bootstrap, epochs=args.epochs,
                             lr=args.lr, if_existing_ckpt="resume")
     posthoc_class = posthoc_class.to("cpu")
