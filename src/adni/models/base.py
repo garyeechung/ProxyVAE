@@ -20,7 +20,7 @@ class Encoder(Module):
         else:
             self.backbone = ModuleList()
             self.downsample_factor = downsample_factor
-            self.backbone.append(Conv2d(1, base_channels, 3, stride=1, padding=1))  # 128 -> 128
+            self.backbone.append(Conv2d(3, base_channels, 3, stride=1, padding=1))  # 128 -> 128
             self.backbone.append(ReLU())
 
             for i in range(downsample_factor):
@@ -54,8 +54,8 @@ class Encoder(Module):
         return mu + eps * std
 
     def forward(self, x, return_flattened=False):
-        if self.backbone is not None:
-            x = x.repeat(1, 3, 1, 1)  # Convert grayscale to RGB if needed
+        if x.shape[1] == 1:
+            x = x.repeat(1, 3, 1, 1)
         z = self.backbone(x)
         mu = self.mu_enc(z)
         logvar = self.logvar_enc(z)
