@@ -5,7 +5,7 @@ from torch.nn import MSELoss
 from tqdm import tqdm
 import wandb
 
-from src.adni.models import ProxyRep2InvaRep
+from src.cnn.models import ProxyRep2InvaRep
 
 
 WANDB_PROJECT = "InvaRep"

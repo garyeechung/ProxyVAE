@@ -4,8 +4,8 @@ import os
 import pandas as pd
 import torch
 
-from src.adni.models import VariationalPredictor
-from src.adni.datasets import get_adni_dataloaders
+from src.cnn.models import VariationalPredictor
+from src.cnn.datasets import get_adni_dataloaders
 from .model import train_infobottleneck
 
 

@@ -1,11 +1,19 @@
 #!/bin/sh
-beta1_values=(0.0000000001 0.01 0.1 0.3 0.5 1.0)
+beta1_values=(0.0 0.0001 0.01 1.0)
+beta2_values=(0.0 0.0001 0.01 1.0)
+device=2
 echo "======================================================"
 echo "run beta1 values: ${beta1_values[@]}"
 echo "======================================================"
 
 for beta1 in ${beta1_values[@]}; do
-    echo "beta1 = $beta1 Phase 1 Training for CVAE"
-    CUDA_VISIBLE_DEVICES=2 python -m src.adni.trainers.invarep.main_phase1 --beta1 $beta1 --epochs 500 --batch_size 500 --lr 5e-4
+    echo "beta1 = $beta1 Phase 1 Training"
+    nohup env CUDA_VISIBLE_DEVICES=$device python -m src.cnn.trainers.adni.invarep.main_phase1 --beta1 $beta1 --epochs 1 --batch_size 256 --lr 1e-3 --backbone resnet18 --bound_z_by tanh > logs/resnet18-tanh/phase1_beta1_$(printf "%.1E" $beta1).log 2>&1
+
+    for beta2 in ${beta2_values[@]}; do
+        echo "beta1 = $beta1, beta2 = $beta2 Phase 2 Training"
+        nohup env CUDA_VISIBLE_DEVICES=$device python -m src.cnn.trainers.adni.invarep.main_phase2 --beta1 $beta1 --beta2 $beta2 --epochs 1 --batch_size 256 --lr 1e-5 --backbone resnet18 --bound_z_by tanh > logs/resnet18-tanh/phase2_beta1_$(printf "%.1E" $beta1)_beta2_$(printf "%.1E" $beta2).log 2>&1
+    done
+
 done
 echo "All runs completed."

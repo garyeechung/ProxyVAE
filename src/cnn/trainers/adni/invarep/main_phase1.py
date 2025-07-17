@@ -4,8 +4,8 @@ import os
 import pandas as pd
 import torch
 
-from src.adni.models import ConditionalVAE
-from src.adni.datasets import get_adni_dataloaders
+from src.cnn.models import ConditionalVAE
+from src.cnn.datasets import get_adni_dataloaders
 from .cvae import train_cvae
 
 
