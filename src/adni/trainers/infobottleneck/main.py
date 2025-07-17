@@ -27,10 +27,12 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    group_model = VariationalPredictor(num_classes=3, backbone=args.backbone, weights="DEFAULT", is_posthoc=False)
+    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    group_model = VariationalPredictor(num_classes=3, backbone=args.backbone, weights="DEFAULT", is_posthoc=False,
+                                       bound_z_by=args.bound_z_by)
     group_model = group_model.to(args.device)
     group_model = train_infobottleneck(model=group_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                                       ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                                       ckpt_dir=ckpt_dir,
                                        x_key="image",
                                        y_key="manufacturer_id",
                                        beta=args.beta,
@@ -52,10 +54,11 @@ def main(args):
     for param in group_model.parameters():
         param.requires_grad = False
 
-    class_model = VariationalPredictor(num_classes=9, encoder=group_model.encoder, is_posthoc=True)
+    class_model = VariationalPredictor(num_classes=9, encoder=group_model.encoder, is_posthoc=True,
+                                       bound_z_by=args.bound_z_by)
     class_model = class_model.to(args.device)
     class_model = train_infobottleneck(model=class_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                                       ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                                       ckpt_dir=ckpt_dir,
                                        x_key="image",
                                        y_key="model_type_id",
                                        beta=args.beta,

@@ -27,15 +27,18 @@ def main(args):
 
     if "resnet" in args.backbone:
         cvae = ConditionalVAE(num_classes=3, latent_dim=256, base_channels=4,
-                              backbone=args.backbone, weights="DEFAULT")
+                              backbone=args.backbone, weights="DEFAULT",
+                              bound_z_by=args.bound_z_by)
     elif args.backbone.isdigit():
         args.backbone = f"cnn{int(args.backbone)}"
         cvae = ConditionalVAE(num_classes=3, latent_dim=256, base_channels=4,
-                              downsample_factor=int(args.backbone))
+                              downsample_factor=int(args.backbone),
+                              bound_z_by=args.bound_z_by)
     cvae = cvae.to(args.device)
 
+    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
     train_cvae(cvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-               ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+               ckpt_dir=ckpt_dir,
                x_key="image",
                y_key="manufacturer_id",
                beta1=args.beta1,
@@ -72,6 +75,9 @@ if __name__ == "__main__":
     parser.add_argument("--if_existing_ckpt", type=str, default="resume",
                         choices=["resume", "replace", "pass"],
                         help="What to do if an existing checkpoint is found")
+    parser.add_argument("--bound_z_by", type=str, default=None,
+                        choices=[None, "tanh", "standardization", "normalization"],
+                        help="How to bound the latent space z")
     args = parser.parse_args()
 
     main(args)

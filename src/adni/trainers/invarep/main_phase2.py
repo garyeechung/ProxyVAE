@@ -29,14 +29,16 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    cvae_ckpt = os.path.join(args.ckpt_dir, args.backbone, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
+    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    cvae_ckpt = os.path.join(ckpt_dir, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
     if not os.path.exists(cvae_ckpt):
         print(f"ConditionalVAE checkpoint not found at {cvae_ckpt}")
         return
 
     cvae_ckpt = torch.load(cvae_ckpt, weights_only=False)
     cvae = ConditionalVAE(num_classes=3, latent_dim=256, base_channels=4,
-                          backbone=args.backbone, weights="DEFAULT")
+                          backbone=args.backbone, weights="DEFAULT",
+                          bound_z_by=args.bound_z_by)
     cvae.load_state_dict(cvae_ckpt["model_state_dict"])
     for param in cvae.parameters():
         param.requires_grad = False
@@ -44,11 +46,12 @@ def main(args):
 
     # Second phase: Train the Invariant Variational Autoencoder (ProxyVAE)
     proxyvae = InvariantVAE(cvae=cvae, latent_dim=256, base_channels=4,
-                            backbone=args.backbone, weights="DEFAULT")
+                            backbone=args.backbone, weights="DEFAULT",
+                            bound_z_by=args.bound_z_by)
     proxyvae = proxyvae.to(args.device)
     print(f"Training ProxyVAE with beta1={args.beta1}, beta2={args.beta2}")
     train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                   ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                   ckpt_dir=ckpt_dir,
                    x_key="image",
                    beta1=args.beta1,
                    beta2=args.beta2,
@@ -68,7 +71,7 @@ def main(args):
     proxy2invarep = proxy2invarep.to(args.device)
     print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
     train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                        ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                        ckpt_dir=ckpt_dir,
                         x_key="image",
                         beta1=args.beta1,
                         beta2=args.beta2,
@@ -86,7 +89,7 @@ def main(args):
     posthoc_group = posthoc_group.to(args.device)
     print(f"Training post-hoc predictor for manufacturer_id with beta1={args.beta1}, beta2={args.beta2}")
     train_posthoc_predictor(posthoc_group, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                            ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                            ckpt_dir=ckpt_dir,
                             x_key="image", y_key="manufacturer_id",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bootstrap=args.bootstrap, epochs=args.epochs,
@@ -100,7 +103,7 @@ def main(args):
     posthoc_class = posthoc_class.to(args.device)
     print(f"Training post-hoc predictor for model_type_id with beta1={args.beta1}, beta2={args.beta2}")
     train_posthoc_predictor(posthoc_class, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                            ckpt_dir=os.path.join(args.ckpt_dir, args.backbone),
+                            ckpt_dir=ckpt_dir,
                             x_key="image", y_key="model_type_id",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bootstrap=args.bootstrap, epochs=args.epochs,
@@ -136,6 +139,9 @@ if __name__ == "__main__":
     parser.add_argument("--if_existing_ckpt", type=str, default="resume",
                         choices=["resume", "replace", "pass"],
                         help="What to do if an existing checkpoint is found")
+    parser.add_argument("--bound_z_by", type=str, default=None,
+                        choices=[None, "tanh", "standardization", "normalization"],
+                        help="How to bound the latent space z")
     args = parser.parse_args()
 
     main(args)

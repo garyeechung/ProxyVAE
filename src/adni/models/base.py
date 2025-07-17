@@ -6,7 +6,8 @@ import torchvision
 
 
 class Encoder(Module):
-    def __init__(self, backbone=None, weights="DEFAULT", latent_dim=256, base_channels=4, downsample_factor=4):
+    def __init__(self, backbone=None, weights="DEFAULT", latent_dim=256, base_channels=4,
+                 downsample_factor=4, bound_z_by=None):
         super(Encoder, self).__init__()
         if backbone in ["resnet18", "resnet50"]:
             backbone = getattr(torchvision.models, backbone)(weights=weights)
@@ -35,6 +36,16 @@ class Encoder(Module):
         self.logvar_enc = Conv2d(backbone_out_channels, latent_dim, 1)
         self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)
         self.latent_dim = latent_dim
+        if bound_z_by is not None:
+            assert bound_z_by in ["tanh", "standardization", "normalization"], "Invalid output activation"
+            if bound_z_by == "tanh":
+                self.output_activation = torch.nn.Tanh()
+            elif bound_z_by == "standardization":
+                self.output_activation = Standardization()
+            elif bound_z_by == "normalization":
+                self.output_activation = Normalization()
+        else:
+            self.output_activation = None
 
     def reparameterize(self, mu, logvar):
         assert mu.shape == logvar.shape, "mu and logvar must have the same shape"
@@ -48,8 +59,10 @@ class Encoder(Module):
         z = self.backbone(x)
         mu = self.mu_enc(z)
         logvar = self.logvar_enc(z)
-        z = self.reparameterize(mu, logvar)
         logvar = torch.clamp(logvar, -10, 10)
+        z = self.reparameterize(mu, logvar)
+        if self.output_activation is not None:
+            z = self.output_activation(z)
         if return_flattened:
             z = self.flatten(z)
             mu = self.flatten(mu)
@@ -76,4 +89,27 @@ class Decoder(Module):
 
     def forward(self, z):
         z = self.conv(z)
+        return z
+
+
+class Standardization(Module):
+    def __init__(self, eps=1e-6):
+        super(Standardization, self).__init__()
+        self.eps = eps
+
+    def forward(self, z):
+        z_mean = z.mean(dim=(2, 3), keepdim=True)
+        z_std = z.std(dim=(2, 3), keepdim=True)
+        z = (z - z_mean) / (z_std + self.eps)
+        return z
+
+
+class Normalization(Module):
+    def __init__(self, eps=1e-6):
+        super(Normalization, self).__init__()
+        self.eps = eps
+
+    def forward(self, z):
+        norm = torch.linalg.norm(z, dim=(2, 3), keepdim=True)
+        z = z / (norm + self.eps)
         return z

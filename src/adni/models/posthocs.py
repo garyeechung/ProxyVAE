@@ -44,12 +44,13 @@ class VariationalPredictor(Module):
     def __init__(self, num_classes: int, is_posthoc: bool,
                  encoder: Encoder = None, latent_dim: int = 256,
                  base_channels: int = 4, image_size: List[int] = [224, 224],
-                 image_channels: int = 1, backbone: str = None, weights: str = "DEFAULT"):
+                 image_channels: int = 1, backbone: str = None,
+                 weights: str = "DEFAULT", bound_z_by: str = None):
         super(VariationalPredictor, self).__init__()
         if encoder is not None:
             self.encoder = encoder
         else:
-            self.encoder = Encoder(backbone=backbone, weights=weights, latent_dim=latent_dim)
+            self.encoder = Encoder(backbone=backbone, weights=weights, latent_dim=latent_dim, bound_z_by=bound_z_by)
             is_posthoc = False
         if is_posthoc:
             for param in self.encoder.parameters():
