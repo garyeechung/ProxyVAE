@@ -2,6 +2,8 @@ from typing import List, Optional
 
 from monai.transforms import Compose, MapTransform
 from monai.transforms import ResizeWithPadOrCropd, Transposed
+import torch
+
 import nibabel as nib
 import numpy as np
 import scipy as sp
@@ -23,9 +25,8 @@ class LoadImageFromPathd(MapTransform):
             path = d[key]
             nii_data = nib.load(path)
             volume = nii_data.get_fdata(dtype=np.float32)
-            volume = np.nan_to_num(volume, nan=0.0, posinf=1.0, neginf=0.0)
-            volume = np.clip(volume, 0.0, 1.0)
-            d[key] = volume
+            volume = np.nan_to_num(volume, nan=0.0, posinf=0.0, neginf=0.0)
+            d[key] = torch.from_numpy(volume.copy())
             d["zooms"] = nii_data.header.get_zooms()
         return d
 
@@ -59,7 +60,6 @@ class ToResolutiond(MapTransform):
             zoom_factors = [old_zoom / target_zoom
                             for target_zoom, old_zoom in zip(self.target_zooms, zooms)]
             volume = sp.ndimage.zoom(volume, zoom_factors, order=1)
-            volume = np.clip(volume, 0.0, 1.0)
             d[key] = volume
         return d
 
@@ -137,15 +137,53 @@ class GetCenterSlicesd(MapTransform):
                 volume = volume[..., center_slice:center_slice + 1]
             else:
                 volume = volume[..., start_slice:end_slice]
-            volume = np.clip(volume, 0.0, 1.0)
             d[key] = volume
+        return d
+
+
+class PercentileNormalized(MapTransform):
+    def __init__(self, keys: List[str],
+                 clip_percentile: float = 99.99,
+                 norm_percentile: float = 99.95,
+                 eps: float = 1e-8):
+        super().__init__(keys=keys)
+        err_msg = "norm_percentile must be less than or equal to clip_percentile, and both must be in (0, 100]"
+        assert 0.0 < norm_percentile <= clip_percentile <= 100.0, err_msg
+        self.clip_percentile = clip_percentile
+        self.norm_percentile = norm_percentile
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            volume = d[key]
+            v_min = volume.min()
+            v_clip = np.percentile(volume, self.clip_percentile)
+            v_norm = np.percentile(volume, self.norm_percentile)
+            volume = np.clip(volume, v_min, v_clip)
+            volume = (volume - v_min) / (v_norm - v_min + 1e-8)
+            d[key] = volume
+        return d
+
+
+class StripMetaTensord(MapTransform):
+    def __init__(self, keys):
+        super().__init__(keys=keys)
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            # Convert MetaTensor or Tensor to regular torch.Tensor
+            if hasattr(d[key], "as_tensor"):
+                d[key] = d[key].as_tensor().numpy().copy()
+            elif hasattr(d[key], "detach"):  # in case it's already Tensor
+                d[key] = d[key].detach().clone().numpy().copy()
         return d
 
 
 def get_cache_transforms(
         image_keys: List[str],
         spatial_size: Optional[List[int]] = [256, 256],
-        slice_range_from_center: float = 0.03
+        slice_range_from_center: float = 0.03,
 ) -> Compose:
     """
     Returns a Compose of transforms to load and preprocess the volume data.
@@ -154,10 +192,11 @@ def get_cache_transforms(
 
     transforms = [
         LoadImageFromPathd(keys=image_keys),
-        Transposed(keys=["image"], indices=(2, 1, 0)),  # from HWD to DWH
+        Transposed(keys=image_keys, indices=(2, 1, 0)),  # from HWD to DWH
         ResizeWithPadOrCropd(keys=image_keys, spatial_size=spatial_size),
-        Transposed(keys=["image"], indices=(2, 1, 0)),  # from DWH back to HWD
-        GetCenterSlicesd(keys=image_keys, slice_range_from_center=slice_range_from_center)
+        Transposed(keys=image_keys, indices=(2, 1, 0)),  # from DWH back to HWD
+        GetCenterSlicesd(keys=image_keys, slice_range_from_center=slice_range_from_center),
+        StripMetaTensord(keys=image_keys)
     ]
     return Compose(transforms)
 

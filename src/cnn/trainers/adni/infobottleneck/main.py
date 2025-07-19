@@ -13,8 +13,8 @@ def main(args):
     df = pd.read_csv(os.path.join(args.data_dir, "adni_data.csv"))
     dataloaders = get_adni_dataloaders(
         df, data_dir=os.path.join(args.data_dir, "FA_rigid_MNI_1mm"),
-        targets=["manufacturer_id", "model_type_id"],
-        batch_size=args.batch_size, include_mappable_site_empty=False,
+        modality=args.modality, targets=["manufacturer_id", "model_type_id"],
+        batch_size=args.batch_size, include_mappable_site_empty=True,
         cache_type="persistent", bootstrap=args.bootstrap,
         num_workers=0, batch_per_epoch=args.batch_per_epoch,
         spatial_size=args.spatial_size,
@@ -27,7 +27,7 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    ckpt_dir = os.path.join(args.ckpt_dir, args.modality, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
     group_model = VariationalPredictor(num_classes=3, backbone=args.backbone, weights="DEFAULT", is_posthoc=False,
                                        bound_z_by=args.bound_z_by)
     group_model = group_model.to(args.device)
@@ -78,6 +78,8 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str,
                         default="/home/chungk1/Repositories/InvaRep/data/ADNI/",
                         help="Directory for ADNI data")
+    parser.add_argument("--modality", type=str, default="fa", choices=["fa", "t1"],
+                        help="Modality to use for training (fa or t1)")
     parser.add_argument("--ckpt_dir", type=str,
                         default="/home/chungk1/Repositories/InvaRep/checkpoints/adni",
                         help="Directory to save checkpoints")
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs to train")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
                         help="Device to use for training (cuda or cpu)")
-    parser.add_argument("--bootstrap", action="store_true", help="Use bootstrap sampling")
+    parser.add_argument("--bootstrap", action="store_true", help="Whether to bootstrap the dataset")
     parser.add_argument("--batch_per_epoch", type=int, default=1000,
                         help="Number of batches per epoch for training")
     parser.add_argument("--spatial_size", type=int, nargs=2, default=[224, 224],

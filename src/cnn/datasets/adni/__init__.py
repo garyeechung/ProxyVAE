@@ -12,7 +12,7 @@ from .transforms import OneHotEncoded, GetCenterSliced, GetRandomSliced
 from .utils import get_dataset_from_data, get_data_from_df, split_train_val
 
 
-def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
+def get_adni_dataloaders(df: pd.DataFrame, modality: str, targets: List[str], data_dir: str,
                          stratified_by: Optional[List[str]] = ["model_type_id"],
                          bootstrap: bool = True, batch_size: int = 32,
                          batch_per_epoch: int = 100, num_workers: int = 4,
@@ -22,9 +22,10 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
                          cache_type: Optional[str] = "persistent",
                          slice_range_from_center: float = 0.03) -> List[DataLoader]:
     np.random.seed(seed)
-    cache_dir = f"{spatial_size[0]}x{spatial_size[1]}_{slice_range_from_center}"
+    cache_dir = f"{modality}_{spatial_size[0]}x{spatial_size[1]}_{slice_range_from_center}"
     cache_dir = os.path.join(data_dir, "cache", cache_dir)
 
+    assert modality in ["fa", "t1"], f"modality must be one of ['fa', 't1'], got {modality}"
     AVAILABLE_TARGETS = ["manufacturer_id", "model_type_id", "site"]
     for target in targets:
         assert target in AVAILABLE_TARGETS, f"target must be one of {AVAILABLE_TARGETS}, got {target}"
@@ -86,7 +87,8 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
 
     # Training dataset
     df_subset = df.loc[train_rows]
-    data = get_data_from_df(df_subset, data_dir, targets, include_mappable_site_empty)
+    data = get_data_from_df(df=df_subset, data_dir=data_dir, modality=modality, targets=targets,
+                            include_mappable_site_empty=include_mappable_site_empty)
     cache_dataset = get_dataset_from_data(data, cache_transforms, cache_type=cache_type,
                                           cache_dir=cache_dir)
     dataset = Dataset(data=cache_dataset, transform=train_transforms)
@@ -103,7 +105,7 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
 
     # Validation dataset
     df_subset = df.loc[valid_rows]
-    data = get_data_from_df(df=df_subset, data_dir=data_dir, targets=targets,
+    data = get_data_from_df(df=df_subset, data_dir=data_dir, modality=modality, targets=targets,
                             include_mappable_site_empty=include_mappable_site_empty)
     cache_dataset = get_dataset_from_data(data, cache_transforms, cache_type=cache_type,
                                           cache_dir=cache_dir)
@@ -122,7 +124,7 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
     # Testing dataset
     holdout_rows = df.index[(df["holdout"]) & (df["manufacturer_id"] != -1)].tolist()
     df_subset = df.loc[holdout_rows]
-    data = get_data_from_df(df=df_subset, data_dir=data_dir, targets=targets,
+    data = get_data_from_df(df=df_subset, data_dir=data_dir, modality=modality, targets=targets,
                             include_mappable_site_empty=include_mappable_site_empty)
     cache_dataset = get_dataset_from_data(data, cache_transforms, cache_type=cache_type,
                                           cache_dir=cache_dir)
@@ -133,7 +135,7 @@ def get_adni_dataloaders(df: pd.DataFrame, targets: List[str], data_dir: str,
     # Unknown dataset
     unknown_rows = df.index[df["manufacturer_id"] == -1].tolist()
     df_subset = df.loc[unknown_rows]
-    data = get_data_from_df(df=df_subset, data_dir=data_dir, targets=targets,
+    data = get_data_from_df(df=df_subset, data_dir=data_dir, modality=modality, targets=targets,
                             include_mappable_site_empty=include_mappable_site_empty)
     cache_dataset = get_dataset_from_data(data, cache_transforms, cache_type=cache_type,
                                           cache_dir=cache_dir)

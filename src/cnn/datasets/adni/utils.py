@@ -6,14 +6,16 @@ import numpy as np
 import pandas as pd
 
 
-def get_data_from_df(df: pd.DataFrame, data_dir: str, targets: List[str], include_mappable_site_empty=False):
+def get_data_from_df(df: pd.DataFrame, modality: str, data_dir: str, targets: List[str], include_mappable_site_empty=False):
 
     if not include_mappable_site_empty:
         df = df[~df["site_empty"]]
 
+    assert modality in ["fa", "t1"], f"modality must be one of ['fa', 't1'], got {modality}"
+
     data = []
     for _, row in df.iterrows():
-        item = {"image": os.path.join(data_dir, row["path"])}
+        item = {"image": os.path.join(data_dir, row[f"path_{modality}"])}
         for target in targets:
             item[target] = row[target]
         for key in ["sub", "ses"]:

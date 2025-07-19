@@ -15,8 +15,8 @@ def main(args):
     df = pd.read_csv(os.path.join(args.data_dir, "adni_data.csv"))
     dataloaders = get_adni_dataloaders(
         df, data_dir=os.path.join(args.data_dir, "FA_rigid_MNI_1mm"),
-        targets=["manufacturer_id", "model_type_id"],
-        batch_size=args.batch_size, include_mappable_site_empty=False,
+        modality=args.modality, targets=["manufacturer_id", "model_type_id"],
+        batch_size=args.batch_size, include_mappable_site_empty=True,
         cache_type="persistent", bootstrap=args.bootstrap,
         num_workers=0, batch_per_epoch=args.batch_per_epoch,
         spatial_size=args.spatial_size,
@@ -29,7 +29,7 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    ckpt_dir = os.path.join(args.ckpt_dir, args.modality, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
     cvae_ckpt = os.path.join(ckpt_dir, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
     if not os.path.exists(cvae_ckpt):
         print(f"ConditionalVAE checkpoint not found at {cvae_ckpt}")
@@ -58,8 +58,8 @@ def main(args):
                    bootstrap=args.bootstrap,
                    bound_z_by=args.bound_z_by,
                    device=args.device,
-                   epochs=args.epochs,
-                   lr=args.lr,
+                   epochs=args.epochs * 4,
+                   lr=args.lr * 10,
                    if_existing_ckpt="resume")
     torch.cuda.empty_cache()
 
@@ -121,6 +121,8 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str,
                         default="/home/chungk1/Repositories/InvaRep/data/ADNI/",
                         help="Directory for ADNI data")
+    parser.add_argument("--modality", type=str, default="fa", choices=["fa", "t1"],
+                        help="Modality to use for training (fa or t1)")
     parser.add_argument("--ckpt_dir", type=str,
                         default="/home/chungk1/Repositories/InvaRep/checkpoints/adni",
                         help="Directory to save checkpoints")
@@ -134,8 +136,7 @@ if __name__ == "__main__":
                         help="Device to use for training (cuda or cpu)")
     parser.add_argument("--batch_per_epoch", type=int, default=100,
                         help="Number of batches per epoch")
-    parser.add_argument("--bootstrap", action="store_true",
-                        help="Whether to bootstrap the dataset")
+    parser.add_argument("--bootstrap", action="store_true", help="Whether to bootstrap the dataset")
     parser.add_argument("--spatial_size", type=int, nargs=2, default=[224, 224],
                         help="Spatial size of the images")
     parser.add_argument("--slice_range_from_center", type=float, default=0.03,
