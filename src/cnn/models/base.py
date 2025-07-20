@@ -72,7 +72,7 @@ class Encoder(Module):
 
 
 class Decoder(Module):
-    def __init__(self, latent_dim=256, base_channels=4, upsample_factor=4):
+    def __init__(self, latent_dim=256, base_channels=4, upsample_factor=4, image_channels=1):
         super(Decoder, self).__init__()
         self.conv = ModuleList()
         self.conv.append(Conv2d(latent_dim, base_channels * (2 ** upsample_factor), 1))
@@ -85,7 +85,7 @@ class Decoder(Module):
             self.conv.append(ConvTranspose2d(out_channels, out_channels, 3, stride=2, padding=1, output_padding=1))
             self.conv.append(ReLU())
 
-        self.conv.append(Conv2d(base_channels, 1, kernel_size=3, stride=1, padding=1))
+        self.conv.append(Conv2d(base_channels, image_channels, kernel_size=3, stride=1, padding=1))
         self.conv = Sequential(*self.conv)
 
     def forward(self, z):

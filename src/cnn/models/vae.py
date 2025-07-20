@@ -5,8 +5,8 @@ from .base import Encoder, Decoder
 
 class ConditionalVAE(Module):
 
-    def __init__(self, num_classes, latent_dim=256, base_channels=32, backbone=None,
-                 weights="DEFAULT", downsample_factor=4, bound_z_by=None):
+    def __init__(self, num_classes, latent_dim=256, base_channels=32, image_channels=1,
+                 backbone=None, weights="DEFAULT", downsample_factor=4, bound_z_by=None):
 
         super(ConditionalVAE, self).__init__()
         self.latent_dim = latent_dim
@@ -15,7 +15,8 @@ class ConditionalVAE(Module):
                                bound_z_by=bound_z_by)
         self.downsample_factor = self.encoder.downsample_factor
         self.upsample_factor = self.downsample_factor
-        self.decoder = Decoder(latent_dim + num_classes, base_channels=base_channels, upsample_factor=self.upsample_factor)
+        self.decoder = Decoder(latent_dim + num_classes, base_channels=base_channels,
+                               image_channels=image_channels, upsample_factor=self.upsample_factor)
         self.num_classes = num_classes
 
     def forward(self, x, y):
@@ -32,8 +33,8 @@ class ConditionalVAE(Module):
 
 class InvariantVAE(Module):
 
-    def __init__(self, cvae, latent_dim=256, base_channels=32, backbone=None,
-                 weights="DEFAULT", downsample_factor=4, bound_z_by=None):
+    def __init__(self, cvae, latent_dim=256, base_channels=32, image_channels=1,
+                 backbone=None, weights="DEFAULT", downsample_factor=4, bound_z_by=None):
         super(InvariantVAE, self).__init__()
 
         self.encoder1 = cvae.encoder
@@ -47,9 +48,8 @@ class InvariantVAE(Module):
                                 bound_z_by=bound_z_by)
         self.downsample_factor = self.encoder2.downsample_factor
         self.upsample_factor = self.downsample_factor
-        self.decoder = Decoder(latent_dim=self.z1_dim + self.z2_dim,
-                               base_channels=base_channels,
-                               upsample_factor=self.upsample_factor)
+        self.decoder = Decoder(latent_dim=self.z1_dim + self.z2_dim, base_channels=base_channels,
+                               image_channels=image_channels, upsample_factor=self.upsample_factor)
 
     def forward(self, x):
         z1, _, _ = self.encoder1(x)
