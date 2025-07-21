@@ -6,9 +6,10 @@ import torch
 
 from src.cnn.models import ConditionalVAE, InvariantVAE, ProxyRep2InvaRep, VariationalPredictor
 from src.cnn.datasets import get_adni_dataloaders
-from .proxyvae import train_proxyvae
-from .proxy2invarep import train_proxy2invarep
-from .posthoc import train_posthoc_predictor
+from src.cnn.trainers.invarep import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
+# from .proxyvae import train_proxyvae
+# from .proxy2invarep import train_proxy2invarep
+# from .posthoc import train_posthoc_predictor
 
 
 def main(args):

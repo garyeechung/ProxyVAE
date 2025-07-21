@@ -6,7 +6,7 @@ import torch
 
 from src.cnn.models import VariationalPredictor
 from src.cnn.datasets import get_adni_dataloaders
-from .model import train_infobottleneck
+from src.cnn.trainers.infobottleneck import train_infobottleneck
 
 
 def main(args):
@@ -46,7 +46,8 @@ def main(args):
     torch.cuda.empty_cache()
 
     group_model_best_path = os.path.join(args.ckpt_dir,
-                                         args.backbone,
+                                         args.modality,
+                                         f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                          "infobottleneck",
                                          f"beta_{args.beta:.1E}",
                                          "infobottleneck_manufacturer_id_best.pth")
@@ -91,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
                         help="Device to use for training (cuda or cpu)")
     parser.add_argument("--bootstrap", action="store_true", help="Whether to bootstrap the dataset")
-    parser.add_argument("--batch_per_epoch", type=int, default=1000,
+    parser.add_argument("--batch_per_epoch", type=int, default=100,
                         help="Number of batches per epoch for training")
     parser.add_argument("--spatial_size", type=int, nargs=2, default=[224, 224],
                         help="Spatial size of the images")
@@ -100,6 +101,8 @@ if __name__ == "__main__":
     parser.add_argument("--if_existing_ckpt", type=str, default="resume",
                         choices=["resume", "replace", "pass"],
                         help="What to do if an existing checkpoint is found")
-
+    parser.add_argument("--bound_z_by", type=str, default=None,
+                        choices=[None, "tanh", "standardization", "normalization"],
+                        help="How to bound the latent space z")
     args = parser.parse_args()
     main(args)
