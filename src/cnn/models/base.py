@@ -22,7 +22,6 @@ class Encoder(Module):
             self.downsample_factor = downsample_factor
             self.backbone.append(Conv2d(3, base_channels, 3, stride=1, padding=1))  # 128 -> 128
             self.backbone.append(ReLU())
-
             for i in range(downsample_factor):
                 in_channels = base_channels * (2 ** i)
                 out_channels = base_channels * (2 ** (i + 1))
@@ -30,8 +29,10 @@ class Encoder(Module):
                 self.backbone.append(ReLU())
                 self.backbone.append(Conv2d(out_channels, out_channels, 3, stride=1, padding=1))
                 self.backbone.append(ReLU())
+            self.backbone = Sequential(*self.backbone)
 
             backbone_out_channels = out_channels
+
         self.mu_enc = Conv2d(backbone_out_channels, latent_dim, 1)
         self.logvar_enc = Conv2d(backbone_out_channels, latent_dim, 1)
         self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)

@@ -13,7 +13,6 @@ from src.cnn.trainers.utils import vis_x_recon_comparison
 
 WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
-WANDB_GROUP = "ADNI_ResNet18"
 
 
 def train_model(model: InvariantVAE, train_loader,
@@ -45,6 +44,7 @@ def train_model(model: InvariantVAE, train_loader,
 
 def evaluate_model(model: InvariantVAE, val_loader,
                    x_key, loss_fn, device,
+                   image_channels=1,
                    return_comparison=True):
     model.eval()
 
@@ -67,7 +67,8 @@ def evaluate_model(model: InvariantVAE, val_loader,
     avg_recon_loss = recon_losses / len(val_loader)
 
     if return_comparison:
-        comparison = vis_x_recon_comparison(x.detach().cpu(), recon_x.detach().cpu(), n=4)
+        comparison = vis_x_recon_comparison(x.detach().cpu(), recon_x.detach().cpu(),
+                                            n=4, num_channels=image_channels)
         return avg_total_loss, avg_recon_loss, avg_kl_loss, comparison
     else:
         return avg_total_loss, avg_recon_loss, avg_kl_loss
@@ -77,6 +78,8 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
                    ckpt_dir: str, x_key: str,
                    beta1: float, beta2: float, device: str,
                    bootstrap: bool, bound_z_by: str,
+                   dataset_name: str, backbone: str,
+                   image_channels=1,
                    epochs: int = 500, lr: float = 5e-4,
                    if_existing_ckpt: str = "resume"):
 
@@ -128,7 +131,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
         ckpt_epoch = 0
 
     wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP,
+               group=f"{dataset_name}_{backbone}",
                name=f"proxyvae_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
                config=config)
 
@@ -141,7 +144,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader,
             loss_fn=loss_fn, device=device)
 
         valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
-            model=model, val_loader=valid_loader,
+            model=model, val_loader=valid_loader, image_channels=image_channels,
             x_key=x_key, loss_fn=loss_fn, device=device, return_comparison=True
         )
 

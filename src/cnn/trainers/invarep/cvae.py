@@ -12,7 +12,6 @@ from src.cnn.trainers.utils import vis_x_recon_comparison
 
 WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
-WANDB_GROUP = "ADNI_ResNet18"
 
 
 def train_model(model: ConditionalVAE, train_loader,
@@ -44,6 +43,7 @@ def train_model(model: ConditionalVAE, train_loader,
 
 def evaluate_model(model: ConditionalVAE, val_loader,
                    x_key, y_key, loss_fn, device,
+                   num_channels: int = 1,
                    return_comparison=True):
     model.eval()
 
@@ -67,7 +67,8 @@ def evaluate_model(model: ConditionalVAE, val_loader,
     avg_recon_loss = recon_losses / len(val_loader)
 
     if return_comparison:
-        comparison = vis_x_recon_comparison(x.detach().cpu(), recon_x.detach().cpu(), n=4)
+        comparison = vis_x_recon_comparison(x.detach().cpu(), recon_x.detach().cpu(),
+                                            n=4, num_channels=num_channels)
         return avg_loss, avg_recon_loss, avg_kl_loss, comparison
     else:
         return avg_loss, avg_recon_loss, avg_kl_loss
@@ -75,8 +76,10 @@ def evaluate_model(model: ConditionalVAE, val_loader,
 
 def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
                x_key: str, y_key: str, beta1: float, device: str,
+               dataset_name: str, backbone: str,
                bound_z_by: str, bootstrap: bool, epochs: int = 500,
-               lr: float = 5e-4, if_existing_ckpt: str = "resume"):
+               lr: float = 5e-4, if_existing_ckpt: str = "resume",
+               num_channels: int = 1):
     """
     data_dir: Absolute path containing the ADNI data.
     ckpt_dir: Absolute path to save the checkpoints.
@@ -132,7 +135,7 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
         ckpt_epoch = 0
 
     wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
-               group=WANDB_GROUP, name=f"cvae_beta1_{beta1:.1E}",
+               group=f"{dataset_name}_{backbone}", name=f"cvae_beta1_{beta1:.1E}",
                config=config)
 
     model = model.to(device)
@@ -145,7 +148,7 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
 
         valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
             model=model, val_loader=valid_loader,
-            x_key=x_key, y_key=y_key,
+            x_key=x_key, y_key=y_key, num_channels=num_channels,
             loss_fn=loss_fn, device=device, return_comparison=True)
 
         log_data = {

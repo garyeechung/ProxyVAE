@@ -11,7 +11,6 @@ from src.cnn.trainers.utils import get_confusion_matrix_heatmap_as_nparray
 
 WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
-WANDB_GROUP = "ADNI_ResNet18"
 
 
 def train_model(model: VariationalPredictor, train_loader,
@@ -95,6 +94,7 @@ def train_infobottleneck(model: VariationalPredictor,
                          train_loader, valid_loader,
                          ckpt_dir: str, x_key: str, y_key: str,
                          beta: float, device: str, bound_z_by: str,
+                         dataset_name: str, backbone: str,
                          bootstrap: bool, epochs: int = 500,
                          lr: float = 5e-4,
                          if_existing_ckpt: str = "resume"):
@@ -147,7 +147,8 @@ def train_infobottleneck(model: VariationalPredictor,
         best_valid_loss = float("inf")
         ckpt_epoch = 0
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY, group=WANDB_GROUP,
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
+               group=f"{dataset_name}_{backbone}",
                name=f"infobottleneck_{y_key}_beta_{beta:.1E}",
                config=config)
 

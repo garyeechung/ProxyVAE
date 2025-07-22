@@ -7,13 +7,13 @@ from .vae import InvariantVAE
 
 
 class ProxyRep2InvaRep(Module):
-    def __init__(self, ivae: InvariantVAE, image_size: Tuple[int, int] = (224, 224)):
+    def __init__(self, ivae: InvariantVAE, image_size: Tuple[int, int] = (224, 224), image_channels: int = 1):
         super(ProxyRep2InvaRep, self).__init__()
         self.ivae = ivae
         for param in self.ivae.parameters():
             param.requires_grad = False
 
-        mock_image = torch.zeros((1, 1, *image_size))
+        mock_image = torch.zeros((2, image_channels, *image_size))  # Batch size of 2 for mock input to avoid issues with batch normalization
         with torch.no_grad():
             mock_z1, _, _ = self.ivae.encoder1(mock_image, return_flattened=True)
             mock_z2, _, _ = self.ivae.encoder2(mock_image, return_flattened=True)
@@ -56,8 +56,9 @@ class VariationalPredictor(Module):
             for param in self.encoder.parameters():
                 param.requires_grad = False
         self.num_classes = num_classes
-        mock_image = torch.zeros((1, image_channels, *image_size))
-        mock_z, _, _ = self.encoder(mock_image, return_flattened=True)
+        mock_image = torch.zeros((2, image_channels, *image_size))  # Batch size of 2 for mock input to avoid issues with batch normalization
+        with torch.no_grad():
+            mock_z, _, _ = self.encoder(mock_image, return_flattened=True)
         self.flatten_dim = mock_z.shape[-1]
 
         self.mlp = Sequential(

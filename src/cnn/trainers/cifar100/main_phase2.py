@@ -1,0 +1,146 @@
+import argparse
+import os
+
+import torch
+
+from src.cnn.models import ConditionalVAE, InvariantVAE, ProxyRep2InvaRep, VariationalPredictor
+from src.cnn.datasets import get_cifar100_dataloaders
+from src.cnn.trainers.invarep import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
+
+
+def main(args):
+    dataloaders = get_cifar100_dataloaders(args.data_dir, batch_size=args.batch_size, val_ratio=0.1)
+    print(f"train: {len(dataloaders[0].dataset)} samples")
+    print(f"valid: {len(dataloaders[1].dataset)} samples")
+    print(f"test: {len(dataloaders[2].dataset)} samples")
+
+    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    cvae_ckpt = os.path.join(ckpt_dir, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
+    if not os.path.exists(cvae_ckpt):
+        print(f"ConditionalVAE checkpoint not found at {cvae_ckpt}")
+        return
+
+    cvae_ckpt = torch.load(cvae_ckpt, weights_only=False)
+    cvae = ConditionalVAE(num_classes=20, latent_dim=256, base_channels=4,
+                          image_channels=3, backbone=args.backbone,
+                          weights="DEFAULT", bound_z_by=args.bound_z_by)
+    cvae.load_state_dict(cvae_ckpt["model_state_dict"])
+    for param in cvae.parameters():
+        param.requires_grad = False
+    torch.cuda.empty_cache()
+
+    # Second phase: Train the Invariant Variational Autoencoder (ProxyVAE)
+    proxyvae = InvariantVAE(cvae=cvae, latent_dim=256, base_channels=4,
+                            image_channels=3, backbone=args.backbone,
+                            weights="DEFAULT", bound_z_by=args.bound_z_by)
+    proxyvae = proxyvae.to(args.device)
+    print(f"Training ProxyVAE with beta1={args.beta1}, beta2={args.beta2}")
+    train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                   ckpt_dir=ckpt_dir,
+                   x_key="image",
+                   image_channels=3,
+                   dataset_name="cifar100",
+                   backbone=args.backbone,
+                   beta1=args.beta1,
+                   beta2=args.beta2,
+                   bootstrap=False,
+                   bound_z_by=args.bound_z_by,
+                   device=args.device,
+                   epochs=args.epochs * 4,
+                   lr=args.lr * 10,
+                   if_existing_ckpt="resume")
+    proxyvae_model_best_path = os.path.join(args.ckpt_dir,
+                                            f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
+                                            "invarep",
+                                            f"beta1_{args.beta1:.1E}",
+                                            f"beta2_{args.beta2:.1E}",
+                                            "proxyvae_best.pth")
+    proxyvae_model_best_ckpt = torch.load(proxyvae_model_best_path, weights_only=False)
+    proxyvae.load_state_dict(proxyvae_model_best_ckpt["model_state_dict"])
+    torch.cuda.empty_cache()
+
+    # Freeze the parameters of ProxyVAE, train z2 -> z1 predictor
+    proxyvae = proxyvae.to("cpu")
+    for param in proxyvae.parameters():
+        param.requires_grad = False
+
+    proxy2invarep = ProxyRep2InvaRep(proxyvae, image_size=args.spatial_size)
+    proxy2invarep = proxy2invarep.to(args.device)
+    print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
+    train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                        ckpt_dir=ckpt_dir,
+                        x_key="image",
+                        dataset_name="cifar100",
+                        backbone=args.backbone,
+                        beta1=args.beta1,
+                        beta2=args.beta2,
+                        bootstrap=False,
+                        bound_z_by=args.bound_z_by,
+                        device=args.device,
+                        epochs=args.epochs,
+                        lr=args.lr,
+                        if_existing_ckpt="resume")
+    proxy2invarep = proxy2invarep.to("cpu")
+    torch.cuda.empty_cache()
+
+    # Post-hoc predictor for coarse_label
+    posthoc_group = VariationalPredictor(encoder=proxyvae.encoder2, image_size=args.spatial_size,
+                                         image_channels=3, num_classes=20, is_posthoc=True)
+    posthoc_group = posthoc_group.to(args.device)
+    print(f"Training post-hoc predictor for coarse_label with beta1={args.beta1}, beta2={args.beta2}")
+    train_posthoc_predictor(posthoc_group, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                            ckpt_dir=ckpt_dir,
+                            dataset_name="cifar100",
+                            backbone=args.backbone,
+                            x_key="image", y_key="coarse_label",
+                            beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by,
+                            bootstrap=False, epochs=args.epochs,
+                            lr=args.lr, if_existing_ckpt="resume")
+    posthoc_group = posthoc_group.to("cpu")
+    torch.cuda.empty_cache()
+
+    # Post-hoc predictor for fine_label
+    posthoc_class = VariationalPredictor(encoder=proxyvae.encoder2, image_size=args.spatial_size,
+                                         image_channels=3, num_classes=100, is_posthoc=True)
+    posthoc_class = posthoc_class.to(args.device)
+    print(f"Training post-hoc predictor for fine_label with beta1={args.beta1}, beta2={args.beta2}")
+    train_posthoc_predictor(posthoc_class, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                            ckpt_dir=ckpt_dir,
+                            x_key="image", y_key="fine_label",
+                            dataset_name="cifar100",
+                            backbone=args.backbone,
+                            beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by,
+                            bootstrap=False, epochs=args.epochs,
+                            lr=args.lr, if_existing_ckpt="resume")
+    posthoc_class = posthoc_class.to("cpu")
+    torch.cuda.empty_cache()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train ProxyVAE and post-hocs for CIFAR-100")
+    parser.add_argument("--data_dir", type=str,
+                        default="/home/chungk1/Repositories/InvaRep/data/CIFAR/",
+                        help="Directory for CIFAR-100 data")
+    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/InvaRep/checkpoints/cifar100",
+                        help="Directory to save checkpoints")
+    parser.add_argument("--backbone", type=str, default="resnet18", help="Backbone architecture")
+    parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
+    parser.add_argument("--beta2", type=float, default=1.0, help="Beta2 parameter for ProxyVAE loss")
+    parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
+    parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate for optimizer")
+    parser.add_argument("--epochs", type=int, default=100, help="Number of epochs to train")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                        help="Device to use for training (cuda or cpu)")
+    parser.add_argument("--spatial_size", type=int, nargs=2, default=[32, 32],
+                        help="Spatial size of the images")
+    parser.add_argument("--if_existing_ckpt", type=str, default="resume",
+                        choices=["resume", "replace", "pass"],
+                        help="What to do if an existing checkpoint is found")
+    parser.add_argument("--bound_z_by", type=str, default=None,
+                        choices=[None, "tanh", "standardization", "normalization"],
+                        help="How to bound the latent space z")
+    args = parser.parse_args()
+
+    main(args)

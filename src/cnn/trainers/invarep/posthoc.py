@@ -12,7 +12,6 @@ from src.cnn.trainers.utils import get_confusion_matrix_heatmap_as_nparray
 
 WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
-WANDB_GROUP = "ADNI_ResNet18"
 
 
 def train_model(model: VariationalPredictor, train_loader,
@@ -83,6 +82,7 @@ def train_posthoc_predictor(model: VariationalPredictor,
                             ckpt_dir: str, x_key: str, y_key: str,
                             beta1: float, beta2: float, device: str,
                             bootstrap: bool, bound_z_by: str,
+                            dataset_name: str, backbone: str,
                             epochs: int = 500, lr: float = 5e-4,
                             if_existing_ckpt: str = "resume"):
     batch_size, _, h, w = next(iter(train_loader))[x_key].shape
@@ -135,7 +135,8 @@ def train_posthoc_predictor(model: VariationalPredictor,
         best_valid_loss = float("inf")
         ckpt_epoch = 0
 
-    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY, group=WANDB_GROUP,
+    wandb.init(project=WANDB_PROJECT, entity=WANDB_ENTITY,
+               group=f"{dataset_name}_{backbone}",
                name=f"posthoc_{y_key}_beta1_{beta1:.1E}_beta2_{beta2:.1E}",
                config=config)
 
