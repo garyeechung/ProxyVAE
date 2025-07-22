@@ -51,6 +51,8 @@ def main(args):
     train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                    ckpt_dir=ckpt_dir,
                    x_key="image",
+                   dataset_name=f"adni_{args.modality}",
+                   backbone=args.backbone,
                    beta1=args.beta1,
                    beta2=args.beta2,
                    bootstrap=args.bootstrap,
@@ -59,6 +61,14 @@ def main(args):
                    epochs=args.epochs * 4,
                    lr=args.lr * 10,
                    if_existing_ckpt="resume")
+    proxyvae_model_best_path = os.path.join(args.ckpt_dir, args.modality,
+                                            f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
+                                            "invarep",
+                                            f"beta1_{args.beta1:.1E}",
+                                            f"beta2_{args.beta2:.1E}",
+                                            "proxyvae_best.pth")
+    proxyvae_model_best_ckpt = torch.load(proxyvae_model_best_path, weights_only=False)
+    proxyvae.load_state_dict(proxyvae_model_best_ckpt["model_state_dict"])
     torch.cuda.empty_cache()
 
     # Freeze the parameters of ProxyVAE, train z2 -> z1 predictor
@@ -66,12 +76,14 @@ def main(args):
     for param in proxyvae.parameters():
         param.requires_grad = False
 
-    proxy2invarep = ProxyRep2InvaRep(proxyvae, image_size=args.spatial_size)
+    proxy2invarep = ProxyRep2InvaRep(proxyvae, image_size=args.spatial_size, image_channels=3)
     proxy2invarep = proxy2invarep.to(args.device)
     print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
     train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                         ckpt_dir=ckpt_dir,
                         x_key="image",
+                        dataset_name=f"adni_{args.modality}",
+                        backbone=args.backbone,
                         beta1=args.beta1,
                         beta2=args.beta2,
                         bootstrap=args.bootstrap,
@@ -91,6 +103,8 @@ def main(args):
     train_posthoc_predictor(posthoc_group, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
                             x_key="image", y_key="manufacturer_id",
+                            dataset_name=f"adni_{args.modality}",
+                            backbone=args.backbone,
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by,
                             bootstrap=args.bootstrap, epochs=args.epochs,
@@ -106,6 +120,8 @@ def main(args):
     train_posthoc_predictor(posthoc_class, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
                             x_key="image", y_key="model_type_id",
+                            dataset_name=f"adni_{args.modality}",
+                            backbone=args.backbone,
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by,
                             bootstrap=args.bootstrap, epochs=args.epochs,

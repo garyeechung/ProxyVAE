@@ -41,6 +41,8 @@ def main(args):
                ckpt_dir=ckpt_dir,
                x_key="image",
                y_key="manufacturer_id",
+               dataset_name=f"adni_{args.modality}",
+               backbone=args.backbone,
                beta1=args.beta1,
                bootstrap=args.bootstrap,
                bound_z_by=args.bound_z_by,
