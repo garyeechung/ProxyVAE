@@ -84,11 +84,11 @@ def convert_config_to_hash(config: dict, length: int = 8) -> str:
     return b64_encoded[:length]
 
 
-def get_confusion_matrix_heatmap_as_nparray(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+def get_confusion_matrix_heatmap_as_nparray(y_true: np.ndarray, y_pred: np.ndarray, annot=False) -> np.ndarray:
 
     confusion_matrix = metrics.confusion_matrix(y_true, y_pred)
     fig, ax = plt.subplots(figsize=(6, 5))
-    sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Blues', ax=ax)
+    sns.heatmap(confusion_matrix, annot=annot, fmt='d', cmap='Blues', ax=ax)
     ax.set_xlabel("Predicted")
     ax.set_ylabel("True")
     ax.set_title("Confusion Matrix")

@@ -48,7 +48,7 @@ if __name__ == "__main__":
                         help="Directory for CIFAR-100 data")
     parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/InvaRep/checkpoints/cifar100",
                         help="Directory to save checkpoints")
-    parser.add_argument("--backbone", type=str, default="4", help="Backbone architecture")
+    parser.add_argument("--backbone", type=str, default="resnet18", help="Backbone architecture")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate for optimizer")

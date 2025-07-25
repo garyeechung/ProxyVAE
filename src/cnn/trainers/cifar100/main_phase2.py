@@ -46,7 +46,7 @@ def main(args):
                    bootstrap=False,
                    bound_z_by=args.bound_z_by,
                    device=args.device,
-                   epochs=args.epochs * 4,
+                   epochs=args.epochs * 6,
                    lr=args.lr * 10,
                    if_existing_ckpt="resume")
     proxyvae_model_best_path = os.path.join(args.ckpt_dir,
