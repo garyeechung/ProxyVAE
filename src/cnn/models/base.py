@@ -14,7 +14,8 @@ class Encoder(Module):
             self.backbone = Sequential(*list(backbone.children())[:-2])
             self.downsample_factor = 5
             dummy_input = torch.zeros((1, 3, 128, 128))
-            z = self.backbone(dummy_input)
+            with torch.no_grad():
+                z = self.backbone(dummy_input)
             backbone_out_channels = z.shape[1]
 
         else:

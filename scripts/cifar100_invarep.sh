@@ -1,11 +1,11 @@
 #!/bin/sh
-device=0
+device=2
 beta1_values=(0.0)  # 0.0 0.0001 1.0
-beta2_values=(0.0 0.0001 1.0)  # 0.0 0.0001 1.0
+beta2_values=(1.0)  # 0.0 0.0001 1.0
 
 backbone="resnet18"
 bound_z_by="tanh"
-batch_size=5000
+batch_size=10000
 
 lr_phase1=1e-4
 lr_phase2=1e-5

@@ -13,7 +13,8 @@ class ProxyRep2InvaRep(Module):
         for param in self.ivae.parameters():
             param.requires_grad = False
 
-        mock_image = torch.zeros((2, image_channels, *image_size))  # Batch size of 2 for mock input to avoid issues with batch normalization
+        device = next(self.ivae.parameters()).device
+        mock_image = torch.zeros((2, image_channels, *image_size), device=device)
         with torch.no_grad():
             mock_z1, _, _ = self.ivae.encoder1(mock_image, return_flattened=True)
             mock_z2, _, _ = self.ivae.encoder2(mock_image, return_flattened=True)
@@ -56,7 +57,8 @@ class VariationalPredictor(Module):
             for param in self.encoder.parameters():
                 param.requires_grad = False
         self.num_classes = num_classes
-        mock_image = torch.zeros((2, image_channels, *image_size))  # Batch size of 2 for mock input to avoid issues with batch normalization
+        device = next(self.encoder.parameters()).device
+        mock_image = torch.zeros((2, image_channels, *image_size), device=device)  # Batch size of 2 for mock input to avoid issues with batch normalization
         with torch.no_grad():
             mock_z, _, _ = self.encoder(mock_image, return_flattened=True)
         self.flatten_dim = mock_z.shape[-1]
