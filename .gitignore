@@ -177,6 +177,7 @@ cython_debug/
 data/
 checkpoints/
 results/
+figures/
 
 # MacOS
 .DS_Store
