@@ -31,11 +31,11 @@ class ConditionalVAE(Module):
         return x_recon, mu, logvar
 
 
-class InvariantVAE(Module):
+class ProxyVAE(Module):
 
     def __init__(self, cvae, latent_dim=256, base_channels=32, image_channels=1,
                  backbone=None, weights="DEFAULT", downsample_factor=4, bound_z_by=None):
-        super(InvariantVAE, self).__init__()
+        super(ProxyVAE, self).__init__()
 
         self.encoder1 = cvae.encoder
         self.z1_dim = cvae.latent_dim

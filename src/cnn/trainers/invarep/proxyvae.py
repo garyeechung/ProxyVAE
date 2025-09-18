@@ -6,7 +6,7 @@ from torch.nn import Module
 from tqdm import tqdm
 import wandb
 
-from src.cnn.models import InvariantVAE
+from src.cnn.models import ProxyVAE
 from src.cnn.losses import VAE_Loss
 from src.cnn.trainers.utils import vis_x_recon_comparison
 
@@ -15,7 +15,7 @@ WANDB_PROJECT = "InvaRep"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
 
 
-def train_model(model: InvariantVAE, train_loader,
+def train_model(model: ProxyVAE, train_loader,
                 x_key, optimizer, loss_fn, device):
     model.train()
 
@@ -42,7 +42,7 @@ def train_model(model: InvariantVAE, train_loader,
     return avg_total_loss, avg_recon_loss, avg_kl_loss
 
 
-def evaluate_model(model: InvariantVAE, val_loader,
+def evaluate_model(model: ProxyVAE, val_loader,
                    x_key, loss_fn, device,
                    image_channels=1,
                    return_comparison=True):

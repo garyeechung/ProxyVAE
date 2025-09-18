@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import torch
 
-from src.cnn.models import ConditionalVAE, InvariantVAE, ProxyRep2InvaRep, VariationalPredictor
+from src.cnn.models import ConditionalVAE, ProxyVAE, ProxyRep2InvaRep, VariationalPredictor
 from src.cnn.datasets import get_adni_dataloaders
 from src.cnn.trainers.invarep import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
 
@@ -42,10 +42,10 @@ def main(args):
         param.requires_grad = False
     torch.cuda.empty_cache()
 
-    # Second phase: Train the Invariant Variational Autoencoder (ProxyVAE)
-    proxyvae = InvariantVAE(cvae=cvae, latent_dim=256, base_channels=4,
-                            backbone=args.backbone, weights="DEFAULT",
-                            bound_z_by=args.bound_z_by)
+    # Second phase: Train the Proxy Variational Autoencoder (ProxyVAE)
+    proxyvae = ProxyVAE(cvae=cvae, latent_dim=256, base_channels=4,
+                        backbone=args.backbone, weights="DEFAULT",
+                        bound_z_by=args.bound_z_by)
     proxyvae = proxyvae.to(args.device)
     print(f"Training ProxyVAE with beta1={args.beta1}, beta2={args.beta2}")
     train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
