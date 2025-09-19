@@ -1,13 +1,13 @@
 import os
 
-# import pandas as pd
+import numpy as np
 import torch
 from tqdm import tqdm
 import wandb
 
 from src.mlp.models import ConditionalVAE
 from src.mlp.losses import VAE_Loss
-from src.mlp.trainers.utils import vis_x_recon_comparison
+from src.mlp.trainers.utils import vis_x_recon_comparison, plot_tsne_adni
 
 
 WANDB_PROJECT = "ProxyVAE"
@@ -49,10 +49,15 @@ def evaluate_model(model: ConditionalVAE, val_loader,
     total_losses = 0.0
     kl_losses = 0.0
     recon_losses = 0.0
+    z_all = []
+    yc_all = []
+    yf_all = []
     with torch.no_grad():
         for batch in val_loader:
             x = batch[0].float().to(device)
             y = batch[1].float().to(device)
+            yc_all.append(batch[1].cpu().numpy().argmax(axis=1))
+            yf_all.append(batch[2].cpu().numpy().argmax(axis=1))
 
             recon_x, mu, logvar = model(x, y)
             total_loss, recon_loss, kl_loss = loss_fn(recon_x, x, mu, logvar)
@@ -60,15 +65,23 @@ def evaluate_model(model: ConditionalVAE, val_loader,
             kl_losses += kl_loss.item()
             recon_losses += recon_loss.item()
 
+            z_all.append(mu.detach().cpu().numpy())
+
     avg_total_loss = total_losses / len(val_loader)
     avg_kl_loss = kl_losses / len(val_loader)
     avg_recon_loss = recon_losses / len(val_loader)
+
+    z_all = np.concatenate(z_all, axis=0)
+    yc_all = np.concatenate(yc_all, axis=0)
+    yf_all = np.concatenate(yf_all, axis=0)
+
+    tsne_img = plot_tsne_adni(z_all, yc_all, yf_all)
 
     comparison = None
     if return_comparison:
         comparison = vis_x_recon_comparison(x.cpu()[0], recon_x.cpu()[0])
 
-    return avg_total_loss, avg_recon_loss, avg_kl_loss, comparison
+    return avg_total_loss, avg_recon_loss, avg_kl_loss, comparison, tsne_img
 
 
 def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
@@ -130,7 +143,7 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
             model=model, train_loader=train_loader, x_key=x_key, y_key=y_key,
             optimizer=optimizer, loss_fn=loss_fn, device=device)
 
-        valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
+        valid_total_loss, valid_recon_loss, valid_kl_loss, comparison, tsne_img = evaluate_model(
             model=model, val_loader=valid_loader, x_key=x_key, y_key=y_key,
             loss_fn=loss_fn, device=device, return_comparison=True)
 
@@ -152,6 +165,7 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
                 "best_valid_loss": best_valid_loss
             }, ckpt_best_path)
             log_data["valid/comparison"] = wandb.Image(comparison, caption=f"Epoch {epoch}")
+            log_data["valid/tsne"] = wandb.Image(tsne_img, caption=f"Epoch {epoch}")
 
         wandb.log(log_data)
 

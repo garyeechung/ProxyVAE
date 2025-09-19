@@ -1,6 +1,6 @@
 import os
 
-# import pandas as pd
+import numpy as np
 import torch
 from torch.nn import Module
 from tqdm import tqdm
@@ -8,7 +8,7 @@ import wandb
 
 from src.mlp.models import ProxyVAE
 from src.mlp.losses import VAE_Loss
-from src.mlp.trainers.utils import vis_x_recon_comparison
+from src.mlp.trainers.utils import vis_x_recon_comparison, plot_tsne_adni
 
 WANDB_PROJECT = "ProxyVAE"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
@@ -50,11 +50,17 @@ def evaluate_model(model: ProxyVAE, val_loader,
     kl_losses = 0.0
     recon_losses = 0.0
     comparison = None
+    z_all = []
+    yc_all = []
+    yf_all = []
     with torch.no_grad():
         for batch in val_loader:
             x = batch[0].float().to(device)
+            yc_all.append(batch[1].cpu().numpy().argmax(axis=1))
+            yf_all.append(batch[2].cpu().numpy().argmax(axis=1))
 
             recon_x, mu, logvar = model(x)
+            z_all.append(model.encoder2(x)[0].cpu().numpy())
             total_loss, recon_loss, kl_loss = loss_fn(recon_x, x, mu, logvar)
             total_losses += total_loss.item()
             kl_losses += kl_loss.item()
@@ -67,7 +73,13 @@ def evaluate_model(model: ProxyVAE, val_loader,
     avg_kl_loss = kl_losses / len(val_loader)
     avg_recon_loss = recon_losses / len(val_loader)
 
-    return avg_total_loss, avg_recon_loss, avg_kl_loss, comparison
+    z_all = np.concatenate(z_all, axis=0)
+    yc_all = np.concatenate(yc_all, axis=0)
+    yf_all = np.concatenate(yf_all, axis=0)
+
+    tsne_img = plot_tsne_adni(z_all, yc_all, yf_all)
+
+    return avg_total_loss, avg_recon_loss, avg_kl_loss, comparison, tsne_img
 
 
 def train_proxyvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
@@ -130,7 +142,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
             x_key=x_key, optimizer=optimizer,
             loss_fn=loss_fn, device=device)
 
-        valid_total_loss, valid_recon_loss, valid_kl_loss, comparison = evaluate_model(
+        valid_total_loss, valid_recon_loss, valid_kl_loss, comparison, tsne_img = evaluate_model(
             model=model, val_loader=valid_loader, x_key=x_key, loss_fn=loss_fn,
             device=device, return_comparison=True
         )
@@ -153,6 +165,7 @@ def train_proxyvae(model: Module, train_loader, valid_loader, ckpt_dir: str,
                 "best_valid_loss": best_valid_loss
             }, ckpt_best_path)
             log_data["valid/comparison"] = wandb.Image(comparison, caption=f"Epoch {epoch}")
+            log_data["valid/tsne"] = wandb.Image(tsne_img, caption=f"Epoch {epoch}")
 
         wandb.log(log_data)
 
