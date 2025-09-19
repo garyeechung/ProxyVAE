@@ -4,9 +4,9 @@ import os
 import pandas as pd
 import torch
 
-from src.mlp.models import ConditionalVAE, ProxyVAE  # , ProxyRep2InvaRep, VariationalPredictor
+from src.mlp.models import ConditionalVAE, ProxyVAE, VariationalPredictor, ProxyRep2InvaRep
 from src.mlp.datasets import get_adni_dataloaders
-from src.mlp.trainers.proxyvae import train_proxyvae  # , train_proxy2invarep, train_posthoc_predictor
+from src.mlp.trainers.proxyvae import train_proxyvae, train_posthoc_predictor, train_proxy2invarep
 
 
 def main(args):
@@ -58,6 +58,56 @@ def main(args):
     proxyvae = proxyvae.to("cpu")
     for param in proxyvae.parameters():
         param.requires_grad = False
+
+    # Freeze the parameters of ProxyVAE, train z2 -> z1 predictor
+    proxyvae = proxyvae.to("cpu")
+    for param in proxyvae.parameters():
+        param.requires_grad = False
+
+    proxy2invarep = ProxyRep2InvaRep(proxyvae)
+    proxy2invarep = proxy2invarep.to(args.device)
+    print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
+    train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                        ckpt_dir=ckpt_dir,
+                        x_key="image",
+                        dataset_name=f"adni_{args.modality}",
+                        beta1=args.beta1,
+                        beta2=args.beta2,
+                        bound_z_by=args.bound_z_by,
+                        device=args.device,
+                        epochs=args.epochs,
+                        lr=args.lr,
+                        if_existing_ckpt="resume")
+    proxy2invarep = proxy2invarep.to("cpu")
+    torch.cuda.empty_cache()
+
+    # Post-hoc predictor for manufacturer_id
+    posthoc_coarse = VariationalPredictor(encoder=proxyvae.encoder2,
+                                          num_classes=3, is_posthoc=True)
+    posthoc_coarse = posthoc_coarse.to(args.device)
+    train_posthoc_predictor(posthoc_coarse, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                            ckpt_dir=ckpt_dir,
+                            x_key="image", y_key="manufacturer_id",
+                            dataset_name=f"adni_{args.modality}",
+                            beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by, epochs=args.epochs,
+                            lr=args.lr, if_existing_ckpt="resume")
+    posthoc_coarse = posthoc_coarse.to("cpu")
+    torch.cuda.empty_cache()
+
+    # Post-hoc predictor for model_type_id
+    posthoc_fine = VariationalPredictor(encoder=proxyvae.encoder2,
+                                        num_classes=9, is_posthoc=True)
+    posthoc_fine = posthoc_fine.to(args.device)
+    train_posthoc_predictor(posthoc_fine, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+                            ckpt_dir=ckpt_dir,
+                            x_key="image", y_key="model_type_id",
+                            dataset_name=f"adni_{args.modality}",
+                            beta1=args.beta1, beta2=args.beta2, device=args.device,
+                            bound_z_by=args.bound_z_by, epochs=args.epochs,
+                            lr=args.lr, if_existing_ckpt="resume")
+    posthoc_fine = posthoc_fine.to("cpu")
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
