@@ -3,6 +3,22 @@ from torch.nn import Module
 from .base import Encoder, Decoder
 
 
+class VAE(Module):
+    def __init__(self, latent_dim=16, hidden_dims=[1024, 512, 256],
+                 input_dim=7260, bound_z_by=None):
+        super(VAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.encoder = Encoder(input_dim=input_dim, hidden_dims=hidden_dims,
+                               latent_dim=latent_dim, bound_z_by=bound_z_by)
+        self.decoder = Decoder(latent_dim=latent_dim, hidden_dims=hidden_dims[::-1],
+                               output_dim=input_dim)
+
+    def forward(self, x):
+        z, mu, logvar = self.encoder(x)
+        x_recon = self.decoder(z)
+        return x_recon, mu, logvar
+
+
 class ConditionalVAE(Module):
 
     def __init__(self, num_classes, latent_dim=16, hidden_dims=[1024, 512, 256],
