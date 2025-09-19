@@ -55,12 +55,12 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train CVAE for ADNI on Manufacturer")
     parser.add_argument("--data_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/data/ADNI/",
+                        default="/home/chungk1/Repositories/ProxyVAE/data/ADNI/",
                         help="Directory for ADNI data")
     parser.add_argument("--modality", type=str, default="fa", choices=["fa", "t1"],
                         help="Modality to use for training (fa or t1)")
     parser.add_argument("--ckpt_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/checkpoints/adni",
+                        default="/home/chungk1/Repositories/ProxyVAE/checkpoints/adni",
                         help="Directory to save checkpoints")
     parser.add_argument("--backbone", type=str, default="4", help="Backbone architecture")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
