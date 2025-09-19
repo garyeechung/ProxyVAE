@@ -18,7 +18,7 @@ class VAE_Loss(nn.Module):
         # Combine the losses
         loss = recon_loss + self.beta * kl_loss
 
-        return loss
+        return loss, recon_loss, kl_loss
 
 
 class InfoBottleneck_Loss(nn.Module):
