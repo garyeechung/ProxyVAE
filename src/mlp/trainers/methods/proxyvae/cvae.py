@@ -15,7 +15,7 @@ WANDB_ENTITY = "garyeechung-vanderbilt-university"
 
 
 def train_model(model: ConditionalVAE, train_loader,
-                x_key, y_key, optimizer, loss_fn, device):
+                x_key, y_key, optimizer, loss_fn, device, y_grain="coarse"):
     model.train()
 
     total_losses = 0.0
@@ -23,7 +23,12 @@ def train_model(model: ConditionalVAE, train_loader,
     recon_losses = 0.0
     for batch in train_loader:
         x = batch[0].float().to(device)
-        y = batch[1].float().to(device)
+        if y_grain == "coarse":
+            y = batch[1].float().to(device)
+        elif y_grain == "fine":
+            y = batch[2].float().to(device)
+        else:
+            raise ValueError(f"y_grain {y_grain} not recognized.")
 
         optimizer.zero_grad()
         recon_x, mu, logvar = model(x, y)
@@ -43,7 +48,7 @@ def train_model(model: ConditionalVAE, train_loader,
 
 def evaluate_model(model: ConditionalVAE, val_loader,
                    x_key, y_key, loss_fn, device,
-                   tsne_config: dict,
+                   tsne_config: dict, y_grain="coarse",
                    comparison_fn=None):
     model.eval()
 
@@ -56,7 +61,13 @@ def evaluate_model(model: ConditionalVAE, val_loader,
     with torch.no_grad():
         for batch in val_loader:
             x = batch[0].float().to(device)
-            y = batch[1].float().to(device)
+            x = batch[0].float().to(device)
+            if y_grain == "coarse":
+                y = batch[1].float().to(device)
+            elif y_grain == "fine":
+                y = batch[2].float().to(device)
+            else:
+                raise ValueError(f"y_grain {y_grain} not recognized.")
             yc_all.append(batch[1].cpu().numpy().argmax(axis=1))
             yf_all.append(batch[2].cpu().numpy().argmax(axis=1))
 
@@ -89,7 +100,8 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
                x_key: str, y_key: str, beta1: float, device: str,
                dataset_name: str, bound_z_by: str,
                tsne_config: dict, epochs: int = 500,
-               lr: float = 5e-3, if_existing_ckpt: str = "resume", comparison_fn=None):
+               lr: float = 5e-3, if_existing_ckpt: str = "resume", comparison_fn=None,
+               y_grain="coarse"):
 
     batch_size = next(iter(train_loader))[0].shape[0]
     batch_per_epoch = len(train_loader)
@@ -143,11 +155,11 @@ def train_cvae(model: ConditionalVAE, train_loader, valid_loader, ckpt_dir: str,
     for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
         train_total_loss, train_recon_loss, train_kl_loss = train_model(
             model=model, train_loader=train_loader, x_key=x_key, y_key=y_key,
-            optimizer=optimizer, loss_fn=loss_fn, device=device)
+            optimizer=optimizer, loss_fn=loss_fn, device=device, y_grain=y_grain)
 
         valid_total_loss, valid_recon_loss, valid_kl_loss, comparison, tsne_img = evaluate_model(
             model=model, val_loader=valid_loader, x_key=x_key, y_key=y_key,
-            loss_fn=loss_fn, device=device, comparison_fn=comparison_fn, tsne_config=tsne_config)
+            loss_fn=loss_fn, device=device, comparison_fn=comparison_fn, tsne_config=tsne_config, y_grain=y_grain)
 
         log_data = {
             "train/total_loss": train_total_loss,

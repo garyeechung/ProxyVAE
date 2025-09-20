@@ -15,7 +15,7 @@ WANDB_ENTITY = "garyeechung-vanderbilt-university"
 
 
 def train_model(model: VariationalPredictor, train_loader,
-                x_key, y_key, optimizer, loss_fn, device):
+                x_key, y_key, optimizer, loss_fn, device, y_grain="coarse"):
     model.train()
 
     total_losses = 0.0
@@ -24,7 +24,12 @@ def train_model(model: VariationalPredictor, train_loader,
     y_pred_all = []
     for batch in train_loader:
         x = batch[0].float().to(device)
-        y = batch[1].argmax(dim=-1).long().to(device)
+        if y_grain == "coarse":
+            y = batch[1].argmax(dim=-1).long().to(device)
+        elif y_grain == "fine":
+            y = batch[2].argmax(dim=-1).long().to(device)
+        else:
+            raise ValueError(f"y_grain {y_grain} not recognized.")
         y_true_all.append(y.cpu().numpy())
 
         optimizer.zero_grad()
@@ -44,7 +49,7 @@ def train_model(model: VariationalPredictor, train_loader,
 
 
 def evaluate_model(model: VariationalPredictor, valid_loader,
-                   x_key, y_key, loss_fn, device):
+                   x_key, y_key, loss_fn, device, y_grain="coarse"):
     model.eval()
 
     total_losses = 0.0
@@ -54,7 +59,12 @@ def evaluate_model(model: VariationalPredictor, valid_loader,
     with torch.no_grad():
         for batch in valid_loader:
             x = batch[0].float().to(device)
-            y = batch[1].argmax(dim=-1).long().to(device)
+            if y_grain == "coarse":
+                y = batch[1].argmax(dim=-1).long().to(device)
+            elif y_grain == "fine":
+                y = batch[2].argmax(dim=-1).long().to(device)
+            else:
+                raise ValueError(f"y_grain {y_grain} not recognized.")
             y_true_all.append(y.cpu().numpy())
 
             y_pred, _, _ = model(x)
@@ -77,7 +87,7 @@ def train_posthoc_predictor(model: VariationalPredictor,
                             beta1: float, beta2: float, device: str,
                             dataset_name: str, bound_z_by: str,
                             epochs: int = 500, lr: float = 5e-4,
-                            if_existing_ckpt: str = "resume"):
+                            if_existing_ckpt: str = "resume", y_grain="coarse"):
     batch_size = next(iter(train_loader))[0].shape[0]
     batch_per_epoch = len(train_loader)
     config = {
@@ -134,11 +144,11 @@ def train_posthoc_predictor(model: VariationalPredictor,
     for epoch in tqdm(range(ckpt_epoch + 1, ckpt_epoch + epochs + 1)):
         train_loss, train_acc = train_model(
             model=model, train_loader=train_loader,
-            x_key=x_key, y_key=y_key,
+            x_key=x_key, y_key=y_key, y_grain=y_grain,
             optimizer=optimizer, loss_fn=loss_fn, device=device)
         valid_loss, valid_acc = evaluate_model(
             model=model, valid_loader=valid_loader,
-            x_key=x_key, y_key=y_key,
+            x_key=x_key, y_key=y_key, y_grain=y_grain,
             loss_fn=loss_fn, device=device)
 
         wandb.log({
