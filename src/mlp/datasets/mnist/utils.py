@@ -11,7 +11,7 @@ TRANSFORM = T.Compose([
     lambda x: torch.flatten(x)
 ])
 
-COARSE_FINE_MAP = {
+MNIST_MERGE_GROUP = COARSE_FINE_MAP = {
     0: [0, 6],  # coarse class 0: fine classes 0 and 6
     1: [1],     # coarse class 1: fine class 1
     2: [4, 7, 9],  # coarse class 2: fine classes 4, 7, and 9
@@ -27,7 +27,7 @@ class MNISTCoarseFineDataset(Dataset):
         super(MNISTCoarseFineDataset, self).__init__()
         transform = T.Compose([
             T.ToTensor(),
-            T.Normalize((0.1307,), (0.3081,)),
+            # T.Normalize((0.1307,), (0.3081,)),
             lambda x: torch.flatten(x)
         ])
         # target_transform = [lambda x: torch.LongTensor([x])]
@@ -51,7 +51,7 @@ class MNISTCoarseFineDataset(Dataset):
         else:
             yf = torch.tensor(yf, dtype=torch.long)
             yc = torch.tensor(yc, dtype=torch.long)
-        return x, yf, yc
+        return x, yc, yf
 
 
 if __name__ == "__main__":

@@ -68,3 +68,45 @@ class ADNIConnectomeDataset(Dataset):
             y_all.append(y)
 
         return x, *y_all
+
+
+ADNI_MERGE_GROUP = {
+    0: [0, 1, 2, 3],  # GE
+    1: [4, 5],        # Philips
+    2: [6, 7, 8]     # Siemens
+}
+
+
+ADNI_COARSE_MAPPING = {
+    0: "GE",
+    1: "Philips",
+    2: "Siemens",
+}
+
+
+ADNI_FINE_MAPPING = {
+    0: "Discovery MR750",
+    1: "Discovery MR750w",
+    2: "Signa HDxt",
+    3: "Signa Premier",
+    4: "Achieva dStream",
+    5: "Ingenia",
+    6: "Prisma",
+    7: "Prisma Fit",
+    8: "Skyra"
+}
+
+
+def convert_flatten_to_upper_triangle(x_flatten, d=121):
+    assert x_flatten.shape[-1] == ((d * (d - 1)) // 2), "size of x_flatten"
+    x_mat = np.zeros((d, d))
+    x_mat[np.triu_indices(d, k=1)] = x_flatten
+    return x_mat
+
+
+def vis_x_recon_comparison(x, x_recon, d=121):
+    x_mat = convert_flatten_to_upper_triangle(x, d)
+    x_recon_mat = convert_flatten_to_upper_triangle(x_recon, d)
+    comparison = np.concatenate([x_mat, x_recon_mat], axis=1)
+
+    return comparison
