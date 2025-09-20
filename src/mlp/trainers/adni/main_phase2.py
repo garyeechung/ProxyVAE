@@ -6,7 +6,15 @@ import torch
 
 from src.mlp.models import ConditionalVAE, ProxyVAE, VariationalPredictor, ProxyRep2InvaRep
 from src.mlp.datasets import get_adni_dataloaders
-from src.mlp.trainers.proxyvae import train_proxyvae, train_posthoc_predictor, train_proxy2invarep
+from src.mlp.trainers.methods.proxyvae import train_proxyvae, train_posthoc_predictor, train_proxy2invarep
+from src.mlp.datasets.connectome.utils import ADNI_MERGE_GROUP, ADNI_COARSE_MAPPING, ADNI_FINE_MAPPING, vis_x_recon_comparison
+
+
+TSNE_CONFIG = {
+    "merge_group": ADNI_MERGE_GROUP,
+    "coarse_mapping": ADNI_COARSE_MAPPING,
+    "fine_mapping": ADNI_FINE_MAPPING
+}
 
 
 def main(args):
@@ -43,7 +51,8 @@ def main(args):
     train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                    ckpt_dir=ckpt_dir, x_key="image", dataset_name=f"adni_{args.modality}",
                    beta1=args.beta1, beta2=args.beta2, device=args.device, epochs=args.epochs,
-                   lr=args.lr, if_existing_ckpt=args.if_existing_ckpt)
+                   lr=args.lr, if_existing_ckpt=args.if_existing_ckpt,
+                   tsne_config=TSNE_CONFIG, comparison_fn=vis_x_recon_comparison)
     proxyvae_model_best_path = os.path.join(args.ckpt_dir,
                                             f"{args.modality}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                             "proxyvae",

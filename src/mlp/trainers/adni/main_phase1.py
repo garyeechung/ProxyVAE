@@ -6,7 +6,15 @@ import torch
 
 from src.mlp.models import ConditionalVAE
 from src.mlp.datasets import get_adni_dataloaders
-from src.mlp.trainers.proxyvae import train_cvae
+from src.mlp.trainers.methods.proxyvae import train_cvae
+from src.mlp.datasets.connectome.utils import ADNI_MERGE_GROUP, ADNI_COARSE_MAPPING, ADNI_FINE_MAPPING, vis_x_recon_comparison
+
+
+TSNE_CONFIG = {
+    "merge_group": ADNI_MERGE_GROUP,
+    "coarse_mapping": ADNI_COARSE_MAPPING,
+    "fine_mapping": ADNI_FINE_MAPPING
+}
 
 
 def main(args):
@@ -36,7 +44,9 @@ def main(args):
                device=args.device,
                epochs=args.epochs,
                lr=args.lr,
-               if_existing_ckpt=args.if_existing_ckpt)
+               if_existing_ckpt=args.if_existing_ckpt,
+               tsne_config=TSNE_CONFIG,
+               comparison_fn=vis_x_recon_comparison)
 
 
 if __name__ == "__main__":
