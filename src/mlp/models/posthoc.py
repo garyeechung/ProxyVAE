@@ -41,7 +41,7 @@ class VariationalPredictor(Module):
             self.encoder = encoder
             self.latent_dim = self.encoder.latent_dim
         else:
-            self.encoder = Encoder(latent_dim=latent_dim, bound_z_by=bound_z_by)
+            self.encoder = Encoder(latent_dim=latent_dim, hidden_dims=hidden_dims, bound_z_by=bound_z_by)
             self.latent_dim = latent_dim
             is_posthoc = False
         if is_posthoc:
@@ -50,7 +50,7 @@ class VariationalPredictor(Module):
         self.num_classes = num_classes
         self.classifier = ModuleList()
         prev_dim = self.latent_dim
-        for h_dim in hidden_dims:
+        for h_dim in [32, 32, 32]:
             self.classifier.append(Linear(prev_dim, h_dim))
             self.classifier.append(ReLU())
             prev_dim = h_dim

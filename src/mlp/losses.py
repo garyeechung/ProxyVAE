@@ -21,9 +21,9 @@ class VAE_Loss(nn.Module):
         return loss, recon_loss, kl_loss
 
 
-class InfoBottleneck_Loss(nn.Module):
+class VIB_Loss(nn.Module):
     def __init__(self, beta):
-        super(InfoBottleneck_Loss, self).__init__()
+        super(VIB_Loss, self).__init__()
         self.cross_entropy_loss = nn.CrossEntropyLoss(reduction="mean")
         self.beta = beta
 
@@ -36,4 +36,4 @@ class InfoBottleneck_Loss(nn.Module):
 
         # Combine the losses
         loss = ce_loss + self.beta * kl_loss
-        return loss
+        return loss, ce_loss, kl_loss
