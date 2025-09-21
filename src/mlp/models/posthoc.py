@@ -33,7 +33,9 @@ class ProxyRep2InvaRep(Module):
 
 class VariationalPredictor(Module):
     def __init__(self, num_classes: int, is_posthoc: bool,
-                 encoder: Encoder = None, latent_dim: int = 16,
+                 encoder: Encoder = None,
+                 input_dim: int = 7260,
+                 latent_dim: int = 16,
                  hidden_dims: List[int] = [1024, 512, 256],
                  bound_z_by: str = None):
         super(VariationalPredictor, self).__init__()
@@ -41,7 +43,7 @@ class VariationalPredictor(Module):
             self.encoder = encoder
             self.latent_dim = self.encoder.latent_dim
         else:
-            self.encoder = Encoder(latent_dim=latent_dim, hidden_dims=hidden_dims, bound_z_by=bound_z_by)
+            self.encoder = Encoder(input_dim=input_dim, latent_dim=latent_dim, hidden_dims=hidden_dims, bound_z_by=bound_z_by)
             self.latent_dim = latent_dim
             is_posthoc = False
         if is_posthoc:
