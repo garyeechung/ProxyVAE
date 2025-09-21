@@ -1,36 +1,29 @@
 import argparse
 import os
 
-import pandas as pd
 import torch
 
 from src.mlp.models import ConditionalVAE, ProxyVAE, VariationalPredictor, ProxyRep2InvaRep
-from src.mlp.datasets import get_adni_dataloaders
-from src.mlp.datasets.connectome.utils import ADNI_MERGE_GROUP, ADNI_COARSE_MAPPING, ADNI_FINE_MAPPING, vis_x_recon_comparison
+from src.mlp.datasets import get_mnist_dataloaders
+from src.mlp.datasets.mnist.utils import MNIST_MERGE_GROUP
 from src.mlp.trainers.methods.proxyvae import train_proxyvae, train_posthoc_predictor, train_proxy2invarep
 
 
 TSNE_CONFIG = {
-    "merge_group": ADNI_MERGE_GROUP,
-    "coarse_mapping": ADNI_COARSE_MAPPING,
-    "fine_mapping": ADNI_FINE_MAPPING
+    "merge_group": MNIST_MERGE_GROUP,
+    "coarse_mapping": {i: f"group {i}" for i in range(len(MNIST_MERGE_GROUP))},
+    "fine_mapping": None
 }
 
 
 def main(args):
-    df = pd.read_csv(os.path.join(args.data_dir, "adni_data_connectome.csv"))
-    dataloaders = get_adni_dataloaders(
-        df, data_dir=os.path.join(args.data_dir, "FA_rigid_MNI_1mm"),
-        modality=args.modality, targets=["manufacturer_id", "model_type_id"],
-        num_classes=[3, 9], one_hot=True,
-        batch_size=args.batch_size, include_mappable_site_empty=False,
-        num_workers=0, batch_per_epoch=args.batch_per_epoch,
-    )
+    dataloaders = get_mnist_dataloaders(root=args.data_dir, batch_size=args.batch_size)
+
     print(f"train: {len(dataloaders[0].dataset)} samples")
     print(f"valid: {len(dataloaders[1].dataset)} samples")
     print(f"test: {len(dataloaders[2].dataset)} samples")
 
-    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.modality}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    ckpt_dir = os.path.join(args.ckpt_dir, f"mnist{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
     cvae_ckpt = os.path.join(ckpt_dir, "proxyvae", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
 
     if not os.path.exists(cvae_ckpt):
@@ -38,7 +31,7 @@ def main(args):
         return
 
     cvae_ckpt = torch.load(cvae_ckpt, weights_only=False)
-    cvae = ConditionalVAE(num_classes=3, bound_z_by=args.bound_z_by)
+    cvae = ConditionalVAE(num_classes=len(MNIST_MERGE_GROUP), bound_z_by=args.bound_z_by)
     cvae.load_state_dict(cvae_ckpt["model_state_dict"])
     for param in cvae.parameters():
         param.requires_grad = False
@@ -49,10 +42,10 @@ def main(args):
     proxyvae = proxyvae.to(args.device)
 
     train_proxyvae(proxyvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                   ckpt_dir=ckpt_dir, x_key="image", dataset_name=f"adni_{args.modality}",
+                   ckpt_dir=ckpt_dir, x_key=None, dataset_name="mnist",
                    beta1=args.beta1, beta2=args.beta2, device=args.device, epochs=args.epochs,
                    lr=args.lr, if_existing_ckpt=args.if_existing_ckpt,
-                   tsne_config=TSNE_CONFIG, comparison_fn=vis_x_recon_comparison)
+                   tsne_config=TSNE_CONFIG, comparison_fn=None)
     proxyvae_model_best_path = os.path.join(args.ckpt_dir,
                                             f"{args.modality}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                             "proxyvae",
@@ -73,8 +66,8 @@ def main(args):
     print(f"Training ProxyRep2InvaRep with beta1={args.beta1}, beta2={args.beta2}")
     train_proxy2invarep(proxy2invarep, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                         ckpt_dir=ckpt_dir,
-                        x_key="image",
-                        dataset_name=f"adni_{args.modality}",
+                        x_key=None,
+                        dataset_name="mnist",
                         beta1=args.beta1,
                         beta2=args.beta2,
                         bound_z_by=args.bound_z_by,
@@ -85,28 +78,26 @@ def main(args):
     proxy2invarep = proxy2invarep.to("cpu")
     torch.cuda.empty_cache()
 
-    # Post-hoc predictor for manufacturer_id
-    posthoc_coarse = VariationalPredictor(encoder=proxyvae.encoder2,
-                                          num_classes=3, is_posthoc=True)
+    # Post-hoc predictor for coarse labels
+    posthoc_coarse = VariationalPredictor(encoder=proxyvae.encoder2, num_classes=len(MNIST_MERGE_GROUP), is_posthoc=True)
     posthoc_coarse = posthoc_coarse.to(args.device)
     train_posthoc_predictor(posthoc_coarse, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
-                            x_key="image", y_key="manufacturer_id",
-                            dataset_name=f"adni_{args.modality}",
+                            x_key=None, y_key=None,
+                            dataset_name="mnist",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,
                             lr=args.lr, if_existing_ckpt="resume", y_grain="coarse")
     posthoc_coarse = posthoc_coarse.to("cpu")
     torch.cuda.empty_cache()
 
-    # Post-hoc predictor for model_type_id
-    posthoc_fine = VariationalPredictor(encoder=proxyvae.encoder2,
-                                        num_classes=9, is_posthoc=True)
+    # Post-hoc predictor for fine labels
+    posthoc_fine = VariationalPredictor(encoder=proxyvae.encoder2, num_classes=10, is_posthoc=True)
     posthoc_fine = posthoc_fine.to(args.device)
     train_posthoc_predictor(posthoc_fine, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
-                            x_key="image", y_key="model_type_id",
-                            dataset_name=f"adni_{args.modality}",
+                            x_key=None, y_key=None,
+                            dataset_name="mnist",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,
                             lr=args.lr, if_existing_ckpt="resume", y_grain="fine")
@@ -115,14 +106,12 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train ProxyVAE and post-hocs for ADNI")
+    parser = argparse.ArgumentParser(description="Train ProxyVAE and post-hocs for MNIST")
     parser.add_argument("--data_dir", type=str,
-                        default="/home/chungk1/Repositories/ProxyVAE/data/ADNI/",
-                        help="Directory for ADNI data")
-    parser.add_argument("--modality", type=str, default="connectome", choices=["connectome"],
-                        help="Modality to use for training (connectome)")
+                        default="/home/chungk1/Repositories/ProxyVAE/data/MNIST/",
+                        help="Directory for MNIST data")
     parser.add_argument("--ckpt_dir", type=str,
-                        default="/home/chungk1/Repositories/ProxyVAE/checkpoints/adni",
+                        default="/home/chungk1/Repositories/ProxyVAE/checkpoints/mnist",
                         help="Directory to save checkpoints")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
     parser.add_argument("--beta2", type=float, default=1.0, help="Beta2 parameter for ProxyVAE loss")
