@@ -100,7 +100,7 @@ def main(args):
                             dataset_name=f"adni_{args.modality}",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,
-                            lr=args.lr, if_existing_ckpt="resume")
+                            lr=args.lr, if_existing_ckpt="resume", y_grain="coarse")
     posthoc_coarse = posthoc_coarse.to("cpu")
     torch.cuda.empty_cache()
 
@@ -114,7 +114,7 @@ def main(args):
                             dataset_name=f"adni_{args.modality}",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,
-                            lr=args.lr, if_existing_ckpt="resume")
+                            lr=args.lr, if_existing_ckpt="resume", y_grain="fine")
     posthoc_fine = posthoc_fine.to("cpu")
     torch.cuda.empty_cache()
 

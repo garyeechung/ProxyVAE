@@ -7,7 +7,6 @@ import torch
 from src.mlp.models import VariationalPredictor
 from src.mlp.datasets import get_adni_dataloaders
 from src.mlp.trainers.methods.vib import train_vib
-from src.mlp.trainers.methods.proxyvae import train_posthoc_predictor
 from src.mlp.datasets.connectome.utils import ADNI_MERGE_GROUP, ADNI_COARSE_MAPPING, ADNI_FINE_MAPPING
 
 
@@ -40,14 +39,14 @@ def main(args):
               ckpt_dir=ckpt_dir, x_key="image", y_key="manufacturer_id",
               dataset_name=f"adni_{args.modality}",
               beta=args.beta, device=args.device,
-              bound_z_by=args.bound_z_by,
+              bound_z_by=args.bound_z_by, is_posthoc=False,
               tsne_config=TSNE_CONFIG, epochs=args.epochs,
-              lr=args.lr, if_existing_ckpt=args.if_existing_ckpt)
+              lr=args.lr, if_existing_ckpt=args.if_existing_ckpt, y_grain="coarse")
     vib_model_best_path = os.path.join(args.ckpt_dir,
                                        f"{args.modality}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                        "vib",
                                        f"beta_{args.beta:.1E}",
-                                       "vib_best.pth")
+                                       "vib_coarse_best.pth")
     vib_model_best_ckpt = torch.load(vib_model_best_path, weights_only=False)
     vib_model.load_state_dict(vib_model_best_ckpt["model_state_dict"])
     for param in vib_model.parameters():
@@ -57,11 +56,13 @@ def main(args):
 
     posthoc_model = VariationalPredictor(num_classes=9, is_posthoc=True, encoder=vib_model.encoder, bound_z_by=args.bound_z_by)
     posthoc_model = posthoc_model.to(args.device)
-    train_posthoc_predictor(posthoc_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
-                            ckpt_dir=ckpt_dir, x_key="image", y_key="model_type_id",
-                            dataset_name=f"adni_{args.modality}",
-                            device=args.device, epochs=args.epochs,
-                            lr=args.lr, if_existing_ckpt=args.if_existing_ckpt)
+    train_vib(posthoc_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+              ckpt_dir=ckpt_dir, x_key="image", y_key="manufacturer_id",
+              dataset_name=f"adni_{args.modality}",
+              beta=args.beta, device=args.device,
+              bound_z_by=args.bound_z_by, is_posthoc=True,
+              tsne_config=TSNE_CONFIG, epochs=args.epochs,
+              lr=args.lr, if_existing_ckpt=args.if_existing_ckpt, y_grain="fine")
 
 
 if __name__ == "__main__":

@@ -46,7 +46,8 @@ def main(args):
                lr=args.lr,
                if_existing_ckpt=args.if_existing_ckpt,
                tsne_config=TSNE_CONFIG,
-               comparison_fn=vis_x_recon_comparison)
+               comparison_fn=vis_x_recon_comparison,
+               y_grain="coarse")
 
 
 if __name__ == "__main__":
