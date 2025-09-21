@@ -31,7 +31,7 @@ def main(args):
         return
 
     cvae_ckpt = torch.load(cvae_ckpt, weights_only=False)
-    cvae = ConditionalVAE(num_classes=len(MNIST_MERGE_GROUP), bound_z_by=args.bound_z_by)
+    cvae = ConditionalVAE(num_classes=len(MNIST_MERGE_GROUP), input_dim=28 * 28, bound_z_by=args.bound_z_by)
     cvae.load_state_dict(cvae_ckpt["model_state_dict"])
     for param in cvae.parameters():
         param.requires_grad = False
@@ -47,7 +47,7 @@ def main(args):
                    lr=args.lr, if_existing_ckpt=args.if_existing_ckpt,
                    tsne_config=TSNE_CONFIG, comparison_fn=None)
     proxyvae_model_best_path = os.path.join(args.ckpt_dir,
-                                            f"{args.modality}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
+                                            f"mnist{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                             "proxyvae",
                                             f"beta1_{args.beta1:.1E}",
                                             f"beta2_{args.beta2:.1E}",

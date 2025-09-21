@@ -23,7 +23,7 @@ def main(args):
     print(f"valid: {len(dataloaders[1].dataset)} samples")
     print(f"test: {len(dataloaders[2].dataset)} samples")
 
-    cvae = ConditionalVAE(num_classes=len(MNIST_MERGE_GROUP), bound_z_by=args.bound_z_by)
+    cvae = ConditionalVAE(num_classes=len(MNIST_MERGE_GROUP), input_dim=28 * 28, bound_z_by=args.bound_z_by)
     cvae = cvae.to(args.device)
     ckpt_dir = os.path.join(args.ckpt_dir, f"mnist{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
 
