@@ -5,8 +5,8 @@ import torch
 
 from src.mlp.models import VariationalPredictor
 from src.mlp.datasets import get_mnist_dataloaders
-from src.mlp.trainers.methods.vib import train_vib
 from src.mlp.datasets.mnist.utils import MNIST_MERGE_GROUP
+from src.mlp.trainers.methods.vib import train_vib
 
 
 TSNE_CONFIG = {

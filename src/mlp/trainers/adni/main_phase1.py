@@ -6,8 +6,8 @@ import torch
 
 from src.mlp.models import ConditionalVAE
 from src.mlp.datasets import get_adni_dataloaders
-from src.mlp.trainers.methods.proxyvae import train_cvae
 from src.mlp.datasets.connectome.utils import ADNI_MERGE_GROUP, ADNI_COARSE_MAPPING, ADNI_FINE_MAPPING, vis_x_recon_comparison
+from src.mlp.trainers.methods.proxyvae import train_cvae
 
 
 TSNE_CONFIG = {
@@ -68,8 +68,6 @@ if __name__ == "__main__":
                         help="Device to use for training (cuda or cpu)")
     parser.add_argument("--batch_per_epoch", type=int, default=100,
                         help="Number of batches per epoch")
-    parser.add_argument("--slice_range_from_center", type=float, default=0.03,
-                        help="Slice range from center for the images")
     parser.add_argument("--if_existing_ckpt", type=str, default="resume",
                         choices=["resume", "replace", "pass"],
                         help="What to do if an existing checkpoint is found")
