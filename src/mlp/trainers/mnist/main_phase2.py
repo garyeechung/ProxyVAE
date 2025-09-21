@@ -83,7 +83,7 @@ def main(args):
     posthoc_coarse = posthoc_coarse.to(args.device)
     train_posthoc_predictor(posthoc_coarse, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
-                            x_key=None, y_key=None,
+                            x_key=None, y_key="coarse",
                             dataset_name="mnist",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,
@@ -96,7 +96,7 @@ def main(args):
     posthoc_fine = posthoc_fine.to(args.device)
     train_posthoc_predictor(posthoc_fine, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                             ckpt_dir=ckpt_dir,
-                            x_key=None, y_key=None,
+                            x_key=None, y_key="fine",
                             dataset_name="mnist",
                             beta1=args.beta1, beta2=args.beta2, device=args.device,
                             bound_z_by=args.bound_z_by, epochs=args.epochs,

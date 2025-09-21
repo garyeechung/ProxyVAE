@@ -30,7 +30,7 @@ def main(args):
     train_cvae(cvae, train_loader=dataloaders[0], valid_loader=dataloaders[1],
                ckpt_dir=ckpt_dir,
                x_key=None,
-               y_key=None,
+               y_key="coarse",
                dataset_name="mnist",
                beta1=args.beta1,
                bound_z_by=args.bound_z_by,
