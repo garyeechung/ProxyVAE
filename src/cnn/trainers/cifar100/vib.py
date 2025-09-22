@@ -1,44 +1,35 @@
 import argparse
 import os
 
-import pandas as pd
 import torch
 
 from src.cnn.models import VariationalPredictor
-from src.cnn.datasets import get_adni_dataloaders
-from src.cnn.trainers.infobottleneck import train_infobottleneck
+from src.cnn.datasets import get_cifar100_dataloaders
+from src.cnn.trainers.methods.vib import train_infobottleneck
 
 
 def main(args):
-    df = pd.read_csv(os.path.join(args.data_dir, "adni_data.csv"))
-    dataloaders = get_adni_dataloaders(
-        df, data_dir=os.path.join(args.data_dir, "FA_rigid_MNI_1mm"),
-        modality=args.modality, targets=["manufacturer_id", "model_type_id"],
-        batch_size=args.batch_size, include_mappable_site_empty=True,
-        cache_type="persistent", bootstrap=args.bootstrap,
-        num_workers=0, batch_per_epoch=args.batch_per_epoch,
-        spatial_size=args.spatial_size,
-        slice_range_from_center=args.slice_range_from_center
-    )
-    print(f"Using device: {args.device}")
-    print(f"Batch size: {args.batch_size}")
+    dataloaders = get_cifar100_dataloaders(args.data_dir, batch_size=args.batch_size, val_ratio=0.1)
     print(f"train: {len(dataloaders[0].dataset)} samples")
     print(f"valid: {len(dataloaders[1].dataset)} samples")
     print(f"test: {len(dataloaders[2].dataset)} samples")
-    print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
-    ckpt_dir = os.path.join(args.ckpt_dir, args.modality, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
-    group_model = VariationalPredictor(num_classes=3, backbone=args.backbone, weights="DEFAULT", is_posthoc=False,
-                                       bound_z_by=args.bound_z_by)
+    ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
+    group_model = VariationalPredictor(num_classes=20, backbone=args.backbone,
+                                       image_channels=3, image_size=[32, 32],
+                                       latent_dim=256, base_channels=4,
+                                       is_posthoc=False, bound_z_by=args.bound_z_by)
     group_model = group_model.to(args.device)
-    group_model = train_infobottleneck(model=group_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+    group_model = train_infobottleneck(model=group_model,
+                                       train_loader=dataloaders[0],
+                                       valid_loader=dataloaders[1],
                                        ckpt_dir=ckpt_dir,
                                        x_key="image",
-                                       y_key="manufacturer_id",
-                                       dataset_name=f"adni_{args.modality}",
+                                       y_key="coarse_label",
+                                       dataset_name="cifar100",
                                        backbone=args.backbone,
                                        beta=args.beta,
-                                       bootstrap=args.bootstrap,
+                                       bootstrap=False,
                                        bound_z_by=args.bound_z_by,
                                        device=args.device,
                                        epochs=args.epochs,
@@ -48,27 +39,30 @@ def main(args):
     torch.cuda.empty_cache()
 
     group_model_best_path = os.path.join(args.ckpt_dir,
-                                         args.modality,
                                          f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
                                          "infobottleneck",
                                          f"beta_{args.beta:.1E}",
-                                         "infobottleneck_manufacturer_id_best.pth")
+                                         "infobottleneck_coarse_label_best.pth")
     group_model_best_ckpt = torch.load(group_model_best_path, weights_only=False)
     group_model.load_state_dict(group_model_best_ckpt["model_state_dict"])
     for param in group_model.parameters():
         param.requires_grad = False
 
-    class_model = VariationalPredictor(num_classes=9, encoder=group_model.encoder, is_posthoc=True,
-                                       bound_z_by=args.bound_z_by)
+    class_model = VariationalPredictor(num_classes=100, encoder=group_model.encoder,
+                                       image_channels=3, image_size=[32, 32],
+                                       latent_dim=256, base_channels=4,
+                                       is_posthoc=True, bound_z_by=args.bound_z_by)
     class_model = class_model.to(args.device)
-    class_model = train_infobottleneck(model=class_model, train_loader=dataloaders[0], valid_loader=dataloaders[1],
+    class_model = train_infobottleneck(model=class_model,
+                                       train_loader=dataloaders[0],
+                                       valid_loader=dataloaders[1],
                                        ckpt_dir=ckpt_dir,
                                        x_key="image",
-                                       y_key="model_type_id",
-                                       dataset_name=f"adni_{args.modality}",
+                                       y_key="fine_label",
+                                       dataset_name="cifar100",
                                        backbone=args.backbone,
                                        beta=args.beta,
-                                       bootstrap=args.bootstrap,
+                                       bootstrap=False,
                                        bound_z_by=args.bound_z_by,
                                        device=args.device,
                                        epochs=args.epochs,
@@ -79,14 +73,10 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train InfoBottleneck for ADNI on Manufacturer and Model Type")
-    parser.add_argument("--data_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/data/ADNI/",
-                        help="Directory for ADNI data")
-    parser.add_argument("--modality", type=str, default="fa", choices=["fa", "t1"],
-                        help="Modality to use for training (fa or t1)")
-    parser.add_argument("--ckpt_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/checkpoints/adni",
+    parser = argparse.ArgumentParser(description="Train InfoBottleneck for CIFAR-100")
+    parser.add_argument("--data_dir", type=str, default="/home/chungk1/Repositories/InvaRep/data/CIFAR",
+                        help="Directory for CIFAR-100 data")
+    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/InvaRep/checkpoints/cifar100",
                         help="Directory to save checkpoints")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Backbone architecture")
     parser.add_argument("--beta", type=float, default=1.0, help="Beta parameter for InfoBottleneck loss")
@@ -95,13 +85,6 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=100, help="Number of epochs to train")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
                         help="Device to use for training (cuda or cpu)")
-    parser.add_argument("--bootstrap", action="store_true", help="Whether to bootstrap the dataset")
-    parser.add_argument("--batch_per_epoch", type=int, default=100,
-                        help="Number of batches per epoch for training")
-    parser.add_argument("--spatial_size", type=int, nargs=2, default=[224, 224],
-                        help="Spatial size of the images")
-    parser.add_argument("--slice_range_from_center", type=float, default=0.03,
-                        help="Slice range from center for the images")
     parser.add_argument("--if_existing_ckpt", type=str, default="resume",
                         choices=["resume", "replace", "pass"],
                         help="What to do if an existing checkpoint is found")
@@ -110,3 +93,4 @@ if __name__ == "__main__":
                         help="How to bound the latent space z")
     args = parser.parse_args()
     main(args)
+    print("Training completed.")

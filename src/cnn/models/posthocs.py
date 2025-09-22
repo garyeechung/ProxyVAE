@@ -3,21 +3,21 @@ from typing import List, Tuple
 import torch
 from torch.nn import Module, Sequential, Linear, ReLU, Softmax
 from .base import Encoder
-from .vae import InvariantVAE
+from .vae import ProxyVAE
 
 
 class ProxyRep2InvaRep(Module):
-    def __init__(self, ivae: InvariantVAE, image_size: Tuple[int, int] = (224, 224), image_channels: int = 1):
+    def __init__(self, proxyvae: ProxyVAE, image_size: Tuple[int, int] = (224, 224), image_channels: int = 1):
         super(ProxyRep2InvaRep, self).__init__()
-        self.ivae = ivae
+        self.proxyvae = proxyvae
         for param in self.ivae.parameters():
             param.requires_grad = False
 
-        device = next(self.ivae.parameters()).device
+        device = next(self.proxyvae.parameters()).device
         mock_image = torch.zeros((2, image_channels, *image_size), device=device)
         with torch.no_grad():
-            mock_z1, _, _ = self.ivae.encoder1(mock_image, return_flattened=True)
-            mock_z2, _, _ = self.ivae.encoder2(mock_image, return_flattened=True)
+            mock_z1, _, _ = self.proxyvae.encoder1(mock_image, return_flattened=True)
+            mock_z2, _, _ = self.proxyvae.encoder2(mock_image, return_flattened=True)
 
         z1_dim = mock_z1.shape[-1]
         z2_dim = mock_z2.shape[-1]
@@ -34,8 +34,8 @@ class ProxyRep2InvaRep(Module):
 
     def forward(self, x):
         with torch.no_grad():
-            z1, _, _ = self.ivae.encoder1(x, return_flattened=True)
-            z2, _, _ = self.ivae.encoder2(x, return_flattened=True)
+            z1, _, _ = self.proxyvae.encoder1(x, return_flattened=True)
+            z2, _, _ = self.proxyvae.encoder2(x, return_flattened=True)
         return z1, z2, self.mlp(z2)
 
 

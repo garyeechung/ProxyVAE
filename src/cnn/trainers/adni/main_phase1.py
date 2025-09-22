@@ -6,7 +6,7 @@ import torch
 
 from src.cnn.models import ConditionalVAE
 from src.cnn.datasets import get_adni_dataloaders
-from src.cnn.trainers.invarep import train_cvae
+from src.cnn.trainers.methods.proxyvae import train_cvae
 
 
 def main(args):

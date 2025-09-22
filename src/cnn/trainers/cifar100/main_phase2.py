@@ -5,7 +5,7 @@ import torch
 
 from src.cnn.models import ConditionalVAE, ProxyVAE, ProxyRep2InvaRep, VariationalPredictor
 from src.cnn.datasets import get_cifar100_dataloaders
-from src.cnn.trainers.invarep import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
+from src.cnn.trainers.methods.proxyvae import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
 
 
 def main(args):
@@ -15,7 +15,7 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
 
     ckpt_dir = os.path.join(args.ckpt_dir, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
-    cvae_ckpt = os.path.join(ckpt_dir, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
+    cvae_ckpt = os.path.join(ckpt_dir, "proxyvae", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
     if not os.path.exists(cvae_ckpt):
         print(f"ConditionalVAE checkpoint not found at {cvae_ckpt}")
         return
@@ -51,7 +51,7 @@ def main(args):
                    if_existing_ckpt="resume")
     proxyvae_model_best_path = os.path.join(args.ckpt_dir,
                                             f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
-                                            "invarep",
+                                            "proxyvae",
                                             f"beta1_{args.beta1:.1E}",
                                             f"beta2_{args.beta2:.1E}",
                                             "proxyvae_best.pth")
@@ -121,9 +121,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ProxyVAE and post-hocs for CIFAR-100")
     parser.add_argument("--data_dir", type=str,
-                        default="/home/chungk1/Repositories/InvaRep/data/CIFAR/",
+                        default="/home/chungk1/Repositories/ProxyVAE/data/CIFAR/",
                         help="Directory for CIFAR-100 data")
-    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/InvaRep/checkpoints/cifar100",
+    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/ProxyVAE/checkpoints/cifar100",
                         help="Directory to save checkpoints")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Backbone architecture")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")

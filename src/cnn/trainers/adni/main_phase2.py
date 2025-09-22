@@ -6,7 +6,7 @@ import torch
 
 from src.cnn.models import ConditionalVAE, ProxyVAE, ProxyRep2InvaRep, VariationalPredictor
 from src.cnn.datasets import get_adni_dataloaders
-from src.cnn.trainers.invarep import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
+from src.cnn.trainers.methods.proxyvae import train_proxyvae, train_proxy2invarep, train_posthoc_predictor
 
 
 def main(args):
@@ -28,7 +28,7 @@ def main(args):
     print(f"unknown: {len(dataloaders[3].dataset)} samples")
 
     ckpt_dir = os.path.join(args.ckpt_dir, args.modality, f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}")
-    cvae_ckpt = os.path.join(ckpt_dir, "invarep", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
+    cvae_ckpt = os.path.join(ckpt_dir, "proxyvae", f"beta1_{args.beta1:.1E}", "cvae_best.pth")
     if not os.path.exists(cvae_ckpt):
         print(f"ConditionalVAE checkpoint not found at {cvae_ckpt}")
         return
@@ -63,7 +63,7 @@ def main(args):
                    if_existing_ckpt="resume")
     proxyvae_model_best_path = os.path.join(args.ckpt_dir, args.modality,
                                             f"{args.backbone}{'_' + args.bound_z_by if args.bound_z_by is not None else ''}",
-                                            "invarep",
+                                            "proxyvae",
                                             f"beta1_{args.beta1:.1E}",
                                             f"beta2_{args.beta2:.1E}",
                                             "proxyvae_best.pth")

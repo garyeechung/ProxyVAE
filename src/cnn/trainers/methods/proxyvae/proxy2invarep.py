@@ -8,7 +8,7 @@ import wandb
 from src.cnn.models import ProxyRep2InvaRep
 
 
-WANDB_PROJECT = "InvaRep"
+WANDB_PROJECT = "ProxyVAE"
 WANDB_ENTITY = "garyeechung-vanderbilt-university"
 
 

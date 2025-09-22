@@ -1,9 +1,10 @@
-from .vae import ConditionalVAE, InvariantVAE
+from .vae import ConditionalVAE, ProxyVAE
 from .posthocs import ProxyRep2InvaRep, VariationalPredictor
 
 
-if __name__ == "__main__":
-    print(ConditionalVAE.__name__)
-    print(InvariantVAE.__name__)
-    print(ProxyRep2InvaRep.__name__)
-    print(VariationalPredictor.__name__)
+__all__ = [
+    "ConditionalVAE",
+    "ProxyVAE",
+    "ProxyRep2InvaRep",
+    "VariationalPredictor",
+]

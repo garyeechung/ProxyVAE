@@ -5,7 +5,7 @@ import torch
 
 from src.cnn.models import ConditionalVAE
 from src.cnn.datasets import get_cifar100_dataloaders
-from src.cnn.trainers.invarep import train_cvae
+from src.cnn.trainers.methods.proxyvae import train_cvae
 
 
 def main(args):
@@ -44,9 +44,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train CVAE for CIFAR-100")
-    parser.add_argument("--data_dir", type=str, default="/home/chungk1/Repositories/InvaRep/data/CIFAR",
+    parser.add_argument("--data_dir", type=str, default="/home/chungk1/Repositories/ProxyVAE/data/CIFAR",
                         help="Directory for CIFAR-100 data")
-    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/InvaRep/checkpoints/cifar100",
+    parser.add_argument("--ckpt_dir", type=str, default="/home/chungk1/Repositories/ProxyVAE/checkpoints/cifar100",
                         help="Directory to save checkpoints")
     parser.add_argument("--backbone", type=str, default="resnet18", help="Backbone architecture")
     parser.add_argument("--beta1", type=float, default=1.0, help="Beta1 parameter for CVAE loss")
