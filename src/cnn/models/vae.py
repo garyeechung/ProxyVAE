@@ -58,3 +58,24 @@ class ProxyVAE(Module):
         z = torch.cat((z1, z2), dim=-3)  # z.shape: (num_classes + 256, 8, 8)
         x_recon = self.decoder(z)
         return x_recon, mu, logvar
+
+
+class VAE(Module):
+
+    def __init__(self, latent_dim=256, base_channels=32, image_channels=1,
+                 backbone=None, weights="DEFAULT", downsample_factor=4, bound_z_by=None):
+
+        super(VAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.encoder = Encoder(backbone=backbone, weights=weights, latent_dim=latent_dim,
+                               base_channels=base_channels, downsample_factor=downsample_factor,
+                               bound_z_by=bound_z_by)
+        self.downsample_factor = self.encoder.downsample_factor
+        self.upsample_factor = self.downsample_factor
+        self.decoder = Decoder(latent_dim=latent_dim, base_channels=base_channels,
+                               image_channels=image_channels, upsample_factor=self.upsample_factor)
+
+    def forward(self, x):
+        z, mu, logvar = self.encoder(x)
+        x_recon = self.decoder(z)
+        return x_recon, mu, logvar
