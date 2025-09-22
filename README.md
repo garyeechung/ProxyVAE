@@ -1,2 +1,2 @@
-# InvaRep
-Invariant Representation Project
+# ProxyVAE
+Proxy Variational Autoencoder Project
