@@ -15,12 +15,12 @@ def main(args):
     print(f"test: {len(dataloaders[2].dataset)} samples")
 
     if "resnet" in args.backbone:
-        cvae = ConditionalVAE(num_classes=20, latent_dim=256, base_channels=4,
+        cvae = ConditionalVAE(num_classes=20, latent_dim=512, base_channels=64,
                               image_channels=3, backbone=args.backbone,
                               weights="DEFAULT", bound_z_by=args.bound_z_by)
     elif args.backbone.isdigit():
         # args.backbone = f"cnn{int(args.backbone)}"
-        cvae = ConditionalVAE(num_classes=20, latent_dim=256, base_channels=4,
+        cvae = ConditionalVAE(num_classes=20, latent_dim=512, base_channels=64,
                               image_channels=3, downsample_factor=int(args.backbone),
                               bound_z_by=args.bound_z_by)
     cvae = cvae.to(args.device)

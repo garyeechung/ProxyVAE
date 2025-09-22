@@ -21,7 +21,7 @@ def main(args):
         return
 
     cvae_ckpt = torch.load(cvae_ckpt, weights_only=False)
-    cvae = ConditionalVAE(num_classes=20, latent_dim=256, base_channels=4,
+    cvae = ConditionalVAE(num_classes=20, latent_dim=512, base_channels=64,
                           image_channels=3, backbone=args.backbone,
                           weights="DEFAULT", bound_z_by=args.bound_z_by)
     cvae.load_state_dict(cvae_ckpt["model_state_dict"])
@@ -30,7 +30,7 @@ def main(args):
     torch.cuda.empty_cache()
 
     # Second phase: Train the Proxy Variational Autoencoder (ProxyVAE)
-    proxyvae = ProxyVAE(cvae=cvae, latent_dim=256, base_channels=4,
+    proxyvae = ProxyVAE(cvae=cvae, latent_dim=512, base_channels=64,
                         image_channels=3, backbone=args.backbone,
                         weights="DEFAULT", bound_z_by=args.bound_z_by)
     proxyvae = proxyvae.to(args.device)
