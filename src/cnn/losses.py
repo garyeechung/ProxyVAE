@@ -9,11 +9,11 @@ class VAE_Loss(nn.Module):
         self.beta = beta
 
     def forward(self, x_recon, x, mu, logvar):
-        # Compute the reconstruction loss
+        summed_dims = [i for i in range(1, len(x.shape))]
         recon_loss = self.reconstruction_loss(x_recon, x)
 
         # Compute the KL divergence loss
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=summed_dims).mean()
 
         # Combine the losses
         if self.beta <= 0:
@@ -33,11 +33,12 @@ class VIB_Loss(nn.Module):
         self.beta = beta
 
     def forward(self, y_gt, y_pred, mu, logvar):
+        summed_dims = [i for i in range(1, len(y_gt.shape))]
         # Compute the cross-entropy loss
         ce_loss = self.cross_entropy_loss(y_pred, y_gt)
 
         # Compute the KL divergence loss
-        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=1).mean()
+        kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp(), dim=summed_dims).mean()
 
         # Combine the losses
         if self.beta <= 0:

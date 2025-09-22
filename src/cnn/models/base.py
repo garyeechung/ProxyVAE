@@ -1,7 +1,6 @@
 import torch
 from torch.nn import Module, ModuleList, Sequential
-from torch.nn import Conv2d, ConvTranspose2d, ReLU, Flatten
-# from torchvision.models import resnet18, resnet50
+from torch.nn import Conv2d, ConvTranspose2d, ReLU, Flatten, BatchNorm2d, Tanh
 import torchvision
 
 
@@ -9,6 +8,9 @@ class Encoder(Module):
     def __init__(self, backbone=None, weights="DEFAULT", latent_dim=256, base_channels=4,
                  downsample_factor=4, bound_z_by=None):
         super(Encoder, self).__init__()
+
+        self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)
+
         if backbone in ["resnet18", "resnet50"]:
             backbone = getattr(torchvision.models, backbone)(weights=weights)
             self.backbone = Sequential(*list(backbone.children())[:-2])
@@ -27,8 +29,10 @@ class Encoder(Module):
                 in_channels = base_channels * (2 ** i)
                 out_channels = base_channels * (2 ** (i + 1))
                 self.backbone.append(Conv2d(in_channels, out_channels, 3, stride=2, padding=1))
+                self.backbone.append(BatchNorm2d(out_channels))
                 self.backbone.append(ReLU())
                 self.backbone.append(Conv2d(out_channels, out_channels, 3, stride=1, padding=1))
+                self.backbone.append(BatchNorm2d(out_channels))
                 self.backbone.append(ReLU())
             self.backbone = Sequential(*self.backbone)
 
@@ -36,7 +40,6 @@ class Encoder(Module):
 
         self.mu_enc = Conv2d(backbone_out_channels, latent_dim, 1)
         self.logvar_enc = Conv2d(backbone_out_channels, latent_dim, 1)
-        self.flatten = Flatten(start_dim=1)  # Flatten the output to (batch_size, latent_dim)
         self.latent_dim = latent_dim
         if bound_z_by is not None:
             assert bound_z_by in ["tanh", "standardization", "normalization"], "Invalid output activation"
@@ -77,17 +80,20 @@ class Decoder(Module):
     def __init__(self, latent_dim=256, base_channels=4, upsample_factor=4, image_channels=1):
         super(Decoder, self).__init__()
         self.conv = ModuleList()
-        self.conv.append(Conv2d(latent_dim, base_channels * (2 ** upsample_factor), 1))
+        self.conv.append(Conv2d(latent_dim, base_channels * (2 ** upsample_factor), 3, stride=1, padding=1))
         self.conv.append(ReLU())
         for i in range(upsample_factor):
             in_channels = base_channels * (2 ** (upsample_factor - i))
             out_channels = base_channels * (2 ** (upsample_factor - i - 1))
             self.conv.append(Conv2d(in_channels, out_channels, 3, stride=1, padding=1))
+            self.conv.append(BatchNorm2d(out_channels))
             self.conv.append(ReLU())
             self.conv.append(ConvTranspose2d(out_channels, out_channels, 3, stride=2, padding=1, output_padding=1))
+            self.conv.append(BatchNorm2d(out_channels))
             self.conv.append(ReLU())
 
         self.conv.append(Conv2d(base_channels, image_channels, kernel_size=3, stride=1, padding=1))
+        self.conv.append(Tanh())
         self.conv = Sequential(*self.conv)
 
     def forward(self, z):
